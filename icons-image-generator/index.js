@@ -87,8 +87,7 @@ async function renderJPGFromSVG(iconID, svgString, saveDirPath) {
       background: background
     })
     .jpeg({
-      quality: 100,
-      compressionLevel: 9,
+      quality: 50,
       progressive: true,
       optimizeScans: true,
     })
