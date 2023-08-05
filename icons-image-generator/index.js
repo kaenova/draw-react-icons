@@ -10,9 +10,10 @@ import sharp from 'sharp'
 import assert from 'node:assert';
 import yargs from 'yargs';
 
-import { hideBin } from 'yargs/helpers'
 import { fileURLToPath } from 'url';
+import { hideBin } from 'yargs/helpers'
 import { renderToString } from 'react-dom/server';
+import { COMPRESSION_LEVEL, zip } from 'zip-a-folder';
 
 import * as icons from 'react-icons'
 
@@ -25,10 +26,10 @@ const argv = yargs(hideBin(process.argv))
     description: 'Rendered SVG Icon Size from react',
     default: 50
   })
-  .option('out_dir', {
+  .option('out_zip', {
     type: 'string',
-    description: "Output folder of generated image",
-    default: 'dist'
+    description: "Output zip of generated image",
+    default: './dist.zip'
   })
   .option('color', {
     type: 'string',
@@ -42,10 +43,11 @@ const argv = yargs(hideBin(process.argv))
   })
   .parse()
 
-const imageDir = path.resolve(__dirname, argv.out_dir)
+const imageDirTemp = path.resolve(__dirname, "dist_temp")
 const iconSize = argv.size
 const iconColor = argv.color
 const iconPadSize = argv.pad_size
+const zipFile = argv.out_zip
 
 async function dynamicReactIconsImport(iconParentID) {
   try {
@@ -100,8 +102,8 @@ async function renderJPGFromSVG(iconID, svgString, saveDirPath) {
 }
 
 async function run() {
-  if (fs.existsSync(imageDir)) {
-    fs.rmSync(imageDir, { recursive: true })
+  if (fs.existsSync(imageDirTemp)) {
+    fs.rmSync(imageDirTemp, { recursive: true })
   }
 
   // Get icon data id
@@ -145,8 +147,8 @@ async function run() {
   }
 
   // Generate Image from 
-  if (!fs.existsSync(imageDir)) {
-    fs.mkdirSync(imageDir)
+  if (!fs.existsSync(imageDirTemp)) {
+    fs.mkdirSync(imageDirTemp)
   }
   const promises = []
   for (let i = 0; i < iconParentIDs.length; i++) {
@@ -155,7 +157,7 @@ async function run() {
     const iconParent = iconSVG[parentID]
     const iconID = Object.keys(iconParent)
 
-    let iconSavePath = path.resolve(imageDir, parentID)
+    let iconSavePath = path.resolve(imageDirTemp, parentID)
     if (!fs.existsSync(iconSavePath)) {
       fs.mkdirSync(iconSavePath)
     }
@@ -169,7 +171,26 @@ async function run() {
   }
   console.log("Waiting renders to be done...")
   await Promise.all(promises)
-  console.log("Process Complete")
+  console.log("Renders Complete, zipping the file...")
+
+  await zip(
+    imageDirTemp,
+    zipFile,
+    {
+      compression: COMPRESSION_LEVEL.high
+    }
+  )
+
+  console.log(`Zipping complete on ${zipFile}, deleting temporary folders...`)
+
+  fs.rmSync(
+    imageDirTemp,
+    {
+      recursive: true
+    }
+  )
+
+  console.log(`Program complete`)
 }
 
 run()

@@ -16,6 +16,7 @@
     "react-dom": "^18.2.0",
     "react-icons": "^4.10.1",
     "sharp": "^0.32.4",
-    "yargs": "^17.7.2"
+    "yargs": "^17.7.2",
+    "zip-a-folder": "^2.0.0"
   }
 }
