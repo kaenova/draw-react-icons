@@ -24,10 +24,10 @@ jobs:
       
       - name: Generate Image
         run: |
-          node icons-image-generator/index.js --size 50 --color black --pad_size 100 --out_dir dist
+          node icons-image-generator/index.js --size 50 --color black --pad_size 50
       
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
           name: react-icons-image
-          path:  icons-image-generator/dist/
+          path:  icons-image-generator/dist.zip
