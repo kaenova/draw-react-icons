@@ -26,8 +26,35 @@ jobs:
         run: |
           node icons-image-generator/index.js --size 50 --color black --pad_size 50
       
-      - name: Upload artifact
+      - name: Upload artifact - react-icons-image
         uses: actions/upload-artifact@v3
         with:
           name: react-icons-image
           path:  icons-image-generator/dist.zip
+  
+  update-database-embedding:
+    needs: ['generate-image']
+    runs-on: ubuntu-20.04
+    name: Update Icon Embedding to Database
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      
+      - name: Download artifact - react-icons-image
+        uses: actions/download-artifact@v3
+        with:
+          name: react-icons-image
+          path: embedding-updater
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10' 
+
+      - name: Install Library
+        run: |
+          make python-lib
+
+      - name: Update Embedding Database
+        run: |
+          python embedding-updater/main.py

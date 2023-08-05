@@ -2,7 +2,10 @@
 node-lib:
 	cd icons-image-generator && npm install && cd ..
 
-lib: node-lib
+python-lib:
+	cd embedding-updater && pip install -r requirements.txt && cd ..
+
+lib: node-lib python-lib
 
 # Generate jpg image
 image-gen: node-lib
