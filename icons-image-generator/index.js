@@ -29,7 +29,7 @@ const argv = yargs(hideBin(process.argv))
   .option('out_zip', {
     type: 'string',
     description: "Output zip of generated image",
-    default: './dist.zip'
+    default: path.resolve(__dirname, 'dist.zip')
   })
   .option('color', {
     type: 'string',
@@ -39,7 +39,7 @@ const argv = yargs(hideBin(process.argv))
   .option('pad_size', {
     type: 'number',
     description: 'Padding for image',
-    default: 100
+    default: 10
   })
   .parse()
 
