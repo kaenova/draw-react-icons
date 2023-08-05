@@ -44,7 +44,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: react-icons-image
-          path: embedding-updater
+          path: embedding-updater/
 
       - name: Setup Python
         uses: actions/setup-python@v4
