@@ -1,7 +1,3 @@
-# draw-react-icons
-
-![System Flow](docs/flow.png)
-
 # Objective
 
 Create a react-icons alternative website to be able search an icon by drawing on the web
