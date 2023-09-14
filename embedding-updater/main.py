@@ -3,60 +3,88 @@
 
 import os
 import pathlib
-import zipfile
 import utils
+import argparse
+import embedder
 import core
-import data
+import timeit
+import logging
+import weaviate
 
-import tensorflow as tf
+logging.root.setLevel(logging.NOTSET)
 
-from huggingface_hub import hf_hub_download
+logging.info("starting script 🔥")
 
+# Zip Input
 script_path = pathlib.Path(__file__).parent.resolve()
+OUTPUT_ZIP_FOLDER_PATH = os.path.join(script_path, "dist")
+DEFAULT_ZIP_PATH = os.path.join(script_path, "dist.zip")
 
-# Huggingface model related
-huggingface_hub_model = "kaenova/quick_draw_cnn"
-huggingface_file = "quick_draw_embed_500000_input_64_64_1.h5"
-model_path = hf_hub_download(huggingface_hub_model, huggingface_file)
-model = tf.keras.models.load_model(model_path)
-input_size = model.input.type_spec.shape[1:]  # (H, W, 1)
+# Embedder
+EMBEDDER_DICT = {"pixel": embedder.pixel_embedder.PixelEmbedder}
 
-# For Github Action Automation on Getting Image
-# Extracting Zip from artifact
-print("Extracting dist.zip")
-zip_file = os.path.join(script_path, "dist.zip")
-icons_folder = os.path.join(script_path, "dist")
-with zipfile.ZipFile(zip_file, "r") as zip_ref:
-    zip_ref.extractall(icons_folder)
-print("Extract complete")
+arg_parser = argparse.ArgumentParser(
+    "Embedding Updater",
+    "This program is a runner to run an embedding inference for an react-icons image that are bundled in a zip file",
+)
+arg_parser.add_argument("-i", default=DEFAULT_ZIP_PATH, help="Path of input zip file")
+arg_parser.add_argument(
+    "--embedder",
+    choices=list(EMBEDDER_DICT.keys()),
+    default=list(EMBEDDER_DICT.keys())[0],
+    help="Embedder model to embed the image",
+)
+arg_parser.add_argument(
+    "--weaviate-endpoint",
+    default="http://localhost:8080",
+    help="Weaviate Endpoint to read and save data",
+)
+arg = arg_parser.parse_args()
+logging.info(
+    f"Detected Input arg: {arg.__dict__}",
+)
 
-# Print stat
-parent_id_list = os.listdir(icons_folder)
-parent_id_stat = {}
-for parent_id in parent_id_list:
-    parent_path = os.path.join(icons_folder, parent_id)
-    total = utils.count_files_inside_folder(parent_path)
-    parent_id_stat[parent_id] = total
-parent_id_stat["total"] = sum(parent_id_stat.values())
-print("artifact stat:", parent_id_stat)
+weaviate_client = weaviate.Client(arg.weaviate_endpoint)
+weaviate_client.schema.get()
 
-# Now image is saved on the same directory of this script with a folder 'dist'
-# output: ['vsc', 'rx', 'tfi', 'ri', 'lu', 'di', 'ti', 'fc', 'im', 'si', 'fa', 'lia', 'hi', 'hi2', 'bs', 'gi', 'sl', 'bi', 'fi', 'cg', 'wi', 'tb', 'io', 'ci', 'gr', 'pi', 'io5', 'ai', 'md', 'go', 'fa6']
-# The output above are folders of icon group. Inside that folders are jpeg of an icon with a code in the filename
+# Initialize embedder
+embedder = EMBEDDER_DICT[arg.embedder]()
 
-# TODO: Do smart image update
-# Smart update (don't update available icon, only update icon that isn't in the database)
-update_parent_id = core.smart_update(icons_folder)
-print(update_parent_id)
+logging.info("Extracting zip 📦")
+t = timeit.default_timer()
+utils.extract_zip(arg.i, OUTPUT_ZIP_FOLDER_PATH)
+t_end = timeit.default_timer()
+logging.debug(f"Zip extractor {t_end - t}")
+logging.info("Zip extracted")
+
+logging.info("Getting checksum on folder's icon")
+t = timeit.default_timer()
+hash_stats = utils.get_folder_checksum_stat(OUTPUT_ZIP_FOLDER_PATH)
+t_end = timeit.default_timer()
+logging.debug(f"Checksum {t_end - t}")
+logging.info(f"Folder checksum stats: {hash_stats}")
+
+# TODO: Get checksum data stored in database if available
+
+# TODO: Compare hash_stats and checksum data on database, list if the parent_id is not present or the checksum does not match. The code below is dummy that consider all parent icon
+embed_parent_id = os.listdir(OUTPUT_ZIP_FOLDER_PATH)
+
+# Prepare Data to be embeded
+t = timeit.default_timer()
+embed_parent_icon_data = []
+for parent_id in embed_parent_id:
+    embed_parent_icon_data.append(
+        core.ParentIconData(
+            parent_id=parent_id,
+            parent_path=os.path.join(OUTPUT_ZIP_FOLDER_PATH, parent_id),
+            invert_image=False,
+            normalize_pixels=True,
+            resize_shape=(28, 28),
+        )
+    )
+t_end = timeit.default_timer()
+logging.debug(f"Data Loader {t_end - t}")
 
 # TODO: Create icon embedding based on icon to be saved into database, use the filename of the icon as key
-icon = data.IconData(
-    "a",
-    "b",
-    os.path.join(script_path ,"dist/ai/AiFillAccountBook.jpg"),
-    resize_shape=input_size[:2],
-    invert_image=False,
-)
-print(icon.to_embeddings(model))
 
 exit(0)
