@@ -3,3 +3,5 @@ huggingface_hub
 Pillow
 checksumdir
 weaviate-client
+SQLAlchemy
+mysqlclient
