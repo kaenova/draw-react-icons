@@ -5,7 +5,6 @@ from sqlalchemy import String
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
-from sqlalchemy.orm import relationship
 
 
 class Base(DeclarativeBase):
@@ -18,4 +17,4 @@ class IconChecksum(Base):
     checksum: Mapped[str] = mapped_column(String(32))
 
     def __repr__(self) -> str:
-        return f"User(id={self.id!r}, name={self.name!r}, fullname={self.fullname!r})"
+        return f"{self.__class__.__name__}(id={self.parent_id!r}, checksum={self.checksum!r})"

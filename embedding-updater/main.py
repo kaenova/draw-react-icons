@@ -13,13 +13,13 @@ import repository
 from logger import log
 
 
-# Zip Input
+# Default ZIP input
 script_path = pathlib.Path(__file__).parent.resolve()
 OUTPUT_ZIP_FOLDER_PATH = os.path.join(script_path, "dist")
 DEFAULT_ZIP_PATH = os.path.join(script_path, "dist.zip")
 
 # Embedder
-EMBEDDER_DICT = {"pixel": embedder.pixel_embedder.PixelEmbedder}
+EMBEDDER_DICT = {"pixel": embedder.PixelEmbedder}
 
 arg_parser = argparse.ArgumentParser(
     "Embedding Updater",
@@ -42,33 +42,73 @@ arg_parser.add_argument(
     default="mysql+mysqldb://root:changeme@localhost:3306/draw-react-icons",
     help="Weaviate Endpoint to read and save data",
 )
+arg_parser.add_argument(
+    "--milvus-indexing",
+    choices=repository.MILVUS_INDEX_METHOD_OPTS,
+    default=repository.MILVUS_INDEX_METHOD_OPTS[0],
+    help="Indexing method on milvus if collection is not created",
+)
+arg_parser.add_argument(
+    "--milvus-endpoint", help="Milvus zilliz endpoint URI", required=True
+)
+arg_parser.add_argument(
+    "--milvus-api-key",
+    help="Milvus zilliz API Key",
+    required=True,
+)
+arg_parser.add_argument(
+    "--milvus-db",
+    help="Milvus Database",
+    required=True,
+)
 
 
 if "__main__" == __name__:
     arg = arg_parser.parse_args()
+
+    log.info("starting script 🔥")
     log.info(
         f"Detected Input arg: {arg.__dict__}",
     )
 
-    log.info("starting script 🔥")
-
     # Initialize Repository
     log.info("Initializing Repository 📚")
     repository = repository.ApplicationRepository(
-        arg.weaviate_endpoint, arg.mysql_endpoint
+        arg.weaviate_endpoint,
+        arg.mysql_endpoint,
+        arg.milvus_endpoint,
+        arg.milvus_api_key,
+        arg.milvus_db,
     )
     log.info("Repository initialize")
 
     # Initialize embedder
+    log.info("Initializing Embedder")
     embedder = EMBEDDER_DICT[arg.embedder]()
+    log.info("Embedder Initialized")
 
-    # log.info("Extracting zip 📦")
-    # t = timeit.default_timer()
-    # utils.extract_zip(arg.i, OUTPUT_ZIP_FOLDER_PATH)
-    # t_end = timeit.default_timer()
-    # log.debug(f"Zip extractor {t_end - t}")
-    # log.info("Zip extracted")
+    # Check collection exist
+    log.info("Checking collection name on repository")
+    base_collection_name = embedder.name()
+    if not repository.collection_exists(embedder, arg.milvus_indexing):
+        log.info(
+            f"Collection not exist, creating collection of {base_collection_name} with {arg.milvus_indexing} indexing"
+        )
+        repository.create_new_collection(
+            embedder,
+            arg.milvus_indexing,
+        )
+    log.info("Collection checked")
 
+    # Unzip data
+    log.info("Extracting zip 📦")
+    t = timeit.default_timer()
+    utils.extract_zip(arg.i, OUTPUT_ZIP_FOLDER_PATH)
+    t_end = timeit.default_timer()
+    log.debug(f"Zip extractor {t_end - t}")
+    log.info("Zip extracted")
+
+    # Get checksum from each parent icon data
     log.info("Getting checksum on folder's icon")
     t = timeit.default_timer()
     hash_stats = utils.get_folder_checksum_stat(OUTPUT_ZIP_FOLDER_PATH)
@@ -76,14 +116,14 @@ if "__main__" == __name__:
     log.debug(f"Checksum {t_end - t}")
     log.info(f"Folder checksum stats: {hash_stats}")
 
-    # check mismatch checksum
+    # check mismatch checksum folder
     mismatch_checksum_parent_id: "typing.List[str]" = []
     for parent_id in hash_stats:
         checksum = repository.get_checksum_parent_icon(parent_id)
         if checksum is None or checksum != hash_stats[parent_id]:
             mismatch_checksum_parent_id.append(parent_id)
 
-    # Prepare Data to be embeded from the mismatch checksum
+    # Prepare icon data to be uploaded
     t = timeit.default_timer()
     log.info(f"Loading Data from a mismatch checksum: {mismatch_checksum_parent_id}")
     embed_parent_icon_data: "typing.List[core.ParentIconData]" = []
@@ -95,13 +135,20 @@ if "__main__" == __name__:
                 invert_image=False,
                 normalize_pixels=True,
                 resize_shape=(28, 28),
+                embedder=embedder,
             )
         )
     t_end = timeit.default_timer()
     log.debug(f"Data Loader {t_end - t}")
 
-    # # TODO: Create icon embedding based on icon to be saved into database, use the filename of the icon as key
-    # embedder.embeds(embed_parent_icon_data[0].icon_data[0])
+    # Save to Embedding DB
+    log.info("Saving unmatch checksum embedding to database")
+    for embed_parent_data in embed_parent_icon_data:
+        for icon_embed_data in embed_parent_data.icon_data_embeddings:
+            repository.add_or_update_icon(
+                icon_embed_data, embedder, arg.milvus_indexing
+            )
+    log.info("Unmatch Embedding saved")
 
     # Save All Checksum on the mismatch checksum
     log.info("Saving new checksum on database 📦")

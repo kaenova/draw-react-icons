@@ -1,30 +1,23 @@
-import typing
-from dataclasses import dataclass
-import numpy as np
-from PIL import Image
 import os
+import typing
 import mimetypes
 import logging
 
+import numpy as np
 
-@dataclass
-class ParentFolderHash:
-    parent_id: "str"
-    hash_str: "str"
-
-
-@dataclass
-class SmartUpdateOutput:
-    update_parent_id_folders: "typing.List[str]"
-    renew_all_collection: "bool"
+from PIL import Image
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from logger import log
 
 
 class IconData:
     def __init__(
         self,
-        icon_id: "str",
+        parent_name: "str",
+        icon_name: "str",
         img_path: "str",
-        resize_shape=(28, 28),
+        resize_shape: "typing.Tuple[int, int]" = (28, 28),
         invert_image=False,
         normalize_pixels=True,
     ) -> None:
@@ -42,7 +35,8 @@ class IconData:
         if invert_image:
             img = (img - 1) * -1
 
-        self.icon_id = icon_id
+        self.parent_name = parent_name
+        self.icon_name = icon_name
         self.img_path = img_path
         self.shape = resize_shape
         self.numpy = img
@@ -50,9 +44,9 @@ class IconData:
     def to_numpy(self) -> "np.ndarray":
         return self.numpy
 
-    def to_pillow(self) -> "Image":
+    def to_pillow(self) -> "Image":  # type: ignore
         img_np = np.reshape(self.numpy, self.shape)
-        return Image.fromarray(np.uint8(img_np * 255), "L")
+        return Image.fromarray(np.uint8(img_np * 255), "L")  # type: ignore
 
 
 class ParentIconData:
@@ -60,6 +54,7 @@ class ParentIconData:
         self,
         parent_id: "str",
         parent_path: "str",
+        embedder: "Embedder",
         resize_shape=(28, 28),
         invert_image=False,
         normalize_pixels=True,
@@ -67,26 +62,63 @@ class ParentIconData:
         self.parent_id = parent_id
         self.parent_path = parent_path
 
-        self.icon_data: "typing.List[IconData]" = []
+        self.icon_data_embeddings: "typing.List[IconEmbeddings]" = []
+        self.embedder = embedder
         image_list = os.listdir(parent_path)
 
         for image_filename in image_list:
             image_path = os.path.join(parent_path, image_filename)
             mime = mimetypes.guess_type(image_path)
+
             if mime[0] not in ["image/jpg", "image/jpeg"]:
+                log.warn(f"{image_path} doesn't have the right mime type")
                 continue
+
+            icon_name = image_filename.split(".")[0]
+            parent_name = parent_id
+
+            # Try to load the data
             try:
-                self.icon_data.append(
-                    IconData(
-                        image_filename.split(".")[0],
-                        image_path,
-                        resize_shape,
-                        invert_image,
-                        normalize_pixels,
-                    )
+                icon = IconData(
+                    parent_name,
+                    icon_name,
+                    image_path,
+                    resize_shape,
+                    invert_image,
+                    normalize_pixels,
                 )
             except:
-                logging.info(f"Cannot load {image_path}, file may be corrupted")
+                log.warn(f"Cannot load {image_path}, file may be corrupted")
+                continue
+
+            icon_embeddings = self.embedder.embeds(icon)
+
+            self.icon_data_embeddings.append(
+                IconEmbeddings(
+                    icon_data=icon,
+                    embeddings=icon_embeddings,
+                )
+            )
+
+
+@dataclass
+class IconEmbeddings:
+    icon_data: "IconData"
+    embeddings: list
+
+
+class Embedder(ABC):
+    @abstractmethod
+    def embeds(self, icon_data: IconData) -> list:
+        pass
+
+    @abstractmethod
+    def name(self) -> "str":
+        pass
+
+    @abstractmethod
+    def num_dimensions(self) -> "int":
+        pass
 
 
 if __name__ == "__main__":
@@ -94,7 +126,6 @@ if __name__ == "__main__":
         "a",
         "b",
         "dist/ai/AiFillAccountBook.jpg",
-        resize_shape=(128, 128),
-        invert_image=False,
+        (128, 128),
+        False,
     )
-    icon.to_pillow().show()
