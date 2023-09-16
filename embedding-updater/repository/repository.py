@@ -1,8 +1,8 @@
-import weaviate
 from sqlalchemy import create_engine, select
 from .model import Base, IconChecksum
 from sqlalchemy.orm import Session
 import pymilvus
+from pymilvus.client.types import LoadState
 import core
 from logger import log
 
@@ -15,15 +15,12 @@ MILVUS_INDEX_METHOD_OPTS = list(typing.get_args(MILVUS_INDEX_METHOD))
 class ApplicationRepository:
     def __init__(
         self,
-        weaviate_endpoint: "str",
         mysql_dsn: "str",
         milvus_uri: "str",
         milvus_api_key: "str",
         milvus_db: "str",
     ) -> None:
         self.sql_engine = create_engine(mysql_dsn, echo=False)
-        self.weaviate_client = weaviate.Client(weaviate_endpoint)
-        self.weaviate_client.schema.get()
 
         self.milvus_cleint_alias = "default"
         pymilvus.connections.connect(
@@ -68,6 +65,10 @@ class ApplicationRepository:
         embedder: core.Embedder,
         indexing_metric: "MILVUS_INDEX_METHOD" = "L2",
     ):
+        """
+        Only creates collection.
+        Before doing query, you need to load it using `load_collection()` methods
+        """
         collection_name = self.generate_collection_name(
             embedder,
             indexing_metric,
@@ -112,18 +113,45 @@ class ApplicationRepository:
             index_params=index_params,
         )
 
+    def collection_is_loaded(
+        self, embedder: core.Embedder, indexing_metric: MILVUS_INDEX_METHOD
+    ):
+        collection_name = self.generate_collection_name(
+            embedder,
+            indexing_metric,
+        )
+        collection = pymilvus.Collection(
+            collection_name, using=self.milvus_cleint_alias
+        )
+        load_state: LoadState = pymilvus.utility.load_state(collection.name)
+        return load_state == LoadState.Loaded
+
+    def load_collection(
+        self, embedder: core.Embedder, indexing_metric: MILVUS_INDEX_METHOD
+    ):
+        collection_name = self.generate_collection_name(
+            embedder,
+            indexing_metric,
+        )
+        collection = pymilvus.Collection(
+            collection_name, using=self.milvus_cleint_alias
+        )
+        collection.load()
+        pymilvus.utility.wait_for_loading_complete(collection.name)
+
     # TODO: Refactor this code so that we can do batched embeded_icon inputs
     def add_or_update_icon(
         self,
-        embeded_icon: "core.IconEmbeddings",
+        embeded_icon: typing.List[core.IconEmbeddings],
         embedder: core.Embedder,
         indexing: MILVUS_INDEX_METHOD,
     ):
-        id = self.generate_icon_entity_id(embeded_icon.icon_data)
+        ids = [self.generate_icon_entity_id(icon.icon_data) for icon in embeded_icon]
         collection = pymilvus.Collection(
             self.generate_collection_name(embedder, indexing)
         )
-        search_query = f"id in ['{id}']"
+        search_query = "id in [" + ",".join([f"'{id}'" for id in ids]) + "]"
+        log.debug(f"Repository: search query {search_query}")
 
         # Search for entities
         res = collection.query(
@@ -138,14 +166,14 @@ class ApplicationRepository:
             collection.delete(search_query)
 
         # Add Entity
-        parent_name = embeded_icon.icon_data.parent_name
-        icon_name = embeded_icon.icon_data.icon_name
-        embeddings = embeded_icon.embeddings
+        parent_names = [icon.icon_data.parent_name for icon in embeded_icon]
+        icon_name = [icon.icon_data.icon_name for icon in embeded_icon]
+        embeddings = [icon.embeddings for icon in embeded_icon]
         entities = [
-            [id],
-            [parent_name],
-            [icon_name],
-            [embeddings],
+            ids,
+            parent_names,
+            icon_name,
+            embeddings,
         ]
         collection.insert(entities)
         collection.flush()

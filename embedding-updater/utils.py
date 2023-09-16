@@ -71,3 +71,9 @@ def count_files_inside_folder(folder_path: "str") -> "int":
         if os.path.isfile(dir_obj_path):
             total += 1
     return total
+
+
+def batch(iterable: typing.List, n=1):
+    l = len(iterable)
+    for ndx in range(0, l, n):
+        yield iterable[ndx : min(ndx + n, l)]

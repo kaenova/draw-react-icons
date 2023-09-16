@@ -23,9 +23,13 @@ EMBEDDER_DICT = {"pixel": embedder.PixelEmbedder}
 
 arg_parser = argparse.ArgumentParser(
     "Embedding Updater",
-    "This program is a runner to run an embedding inference for an react-icons image that are bundled in a zip file",
+    "This program is a runner to run an embedding inference for an react-icons image that are bundled in a zip file. The image of the emdeds need to have a background of black and the foreground of white. You can invert the image using --invert argument",
 )
-arg_parser.add_argument("-i", default=DEFAULT_ZIP_PATH, help="Path of input zip file")
+arg_parser.add_argument(
+    "-i",
+    default=DEFAULT_ZIP_PATH,
+    help="Path of input zip file",
+)
 arg_parser.add_argument(
     "--embedder",
     choices=list(EMBEDDER_DICT.keys()),
@@ -33,14 +37,21 @@ arg_parser.add_argument(
     help="Embedder model to embed the image",
 )
 arg_parser.add_argument(
-    "--weaviate-endpoint",
-    default="http://localhost:8080",
-    help="Weaviate Endpoint to read and save data",
+    "--invert",
+    help="Invert image black and white",
+    type=bool,
+    default=False,
+)
+arg_parser.add_argument(
+    "--normalize",
+    help="True image to [0..1] range",
+    type=bool,
+    default=True,
 )
 arg_parser.add_argument(
     "--mysql-endpoint",
     default="mysql+mysqldb://root:changeme@localhost:3306/draw-react-icons",
-    help="Weaviate Endpoint to read and save data",
+    help="Mysql Endpoint to read and save data",
 )
 arg_parser.add_argument(
     "--milvus-indexing",
@@ -49,7 +60,9 @@ arg_parser.add_argument(
     help="Indexing method on milvus if collection is not created",
 )
 arg_parser.add_argument(
-    "--milvus-endpoint", help="Milvus zilliz endpoint URI", required=True
+    "--milvus-endpoint",
+    help="Milvus zilliz endpoint URI",
+    required=True,
 )
 arg_parser.add_argument(
     "--milvus-api-key",
@@ -61,6 +74,12 @@ arg_parser.add_argument(
     help="Milvus Database",
     required=True,
 )
+arg_parser.add_argument(
+    "--milvus-upload-batch",
+    help="Milvus number of batch to be uploaded, for rough estimation there are 44000 icons",
+    type=int,
+    default=1000,
+)
 
 
 if "__main__" == __name__:
@@ -71,21 +90,20 @@ if "__main__" == __name__:
         f"Detected Input arg: {arg.__dict__}",
     )
 
+    # Initialize embedder
+    log.info("Initializing Embedder")
+    embedder = EMBEDDER_DICT[arg.embedder]()
+    log.info("Embedder Initialized")
+
     # Initialize Repository
     log.info("Initializing Repository 📚")
     repository = repository.ApplicationRepository(
-        arg.weaviate_endpoint,
         arg.mysql_endpoint,
         arg.milvus_endpoint,
         arg.milvus_api_key,
         arg.milvus_db,
     )
     log.info("Repository initialize")
-
-    # Initialize embedder
-    log.info("Initializing Embedder")
-    embedder = EMBEDDER_DICT[arg.embedder]()
-    log.info("Embedder Initialized")
 
     # Check collection exist
     log.info("Checking collection name on repository")
@@ -98,6 +116,11 @@ if "__main__" == __name__:
             embedder,
             arg.milvus_indexing,
         )
+        log.info("Collection created")
+    if not repository.collection_is_loaded(embedder, arg.milvus_indexing):
+        log.info("Collection is not loadded, loading the collection")
+        repository.load_collection(embedder, arg.milvus_indexing)
+        log.info("Collection loaded")
     log.info("Collection checked")
 
     # Unzip data
@@ -107,6 +130,13 @@ if "__main__" == __name__:
     t_end = timeit.default_timer()
     log.debug(f"Zip extractor {t_end - t}")
     log.info("Zip extracted")
+
+    # Count data
+    log.info("Getting the number on folder's icon")
+    t = timeit.default_timer()
+    count_stats = utils.get_folder_count_stat(OUTPUT_ZIP_FOLDER_PATH)
+    t_end = timeit.default_timer()
+    log.info(f"Folder count stats: {count_stats}")
 
     # Get checksum from each parent icon data
     log.info("Getting checksum on folder's icon")
@@ -124,30 +154,39 @@ if "__main__" == __name__:
             mismatch_checksum_parent_id.append(parent_id)
 
     # Prepare icon data to be uploaded
-    t = timeit.default_timer()
     log.info(f"Loading Data from a mismatch checksum: {mismatch_checksum_parent_id}")
+    t = timeit.default_timer()
     embed_parent_icon_data: "typing.List[core.ParentIconData]" = []
     for parent_id in mismatch_checksum_parent_id:
         embed_parent_icon_data.append(
             core.ParentIconData(
                 parent_id=parent_id,
                 parent_path=os.path.join(OUTPUT_ZIP_FOLDER_PATH, parent_id),
-                invert_image=False,
-                normalize_pixels=True,
+                invert_image=arg.invert,
+                normalize_pixels=arg.normalize,
                 resize_shape=(28, 28),
                 embedder=embedder,
             )
         )
     t_end = timeit.default_timer()
     log.debug(f"Data Loader {t_end - t}")
+    log.info(f"Data Loaded")
 
     # Save to Embedding DB
     log.info("Saving unmatch checksum embedding to database")
+    t = timeit.default_timer()
     for embed_parent_data in embed_parent_icon_data:
-        for icon_embed_data in embed_parent_data.icon_data_embeddings:
+        for icon_embed_batch in utils.batch(
+            embed_parent_data.icon_data_embeddings,
+            arg.milvus_upload_batch,
+        ):
             repository.add_or_update_icon(
-                icon_embed_data, embedder, arg.milvus_indexing
+                icon_embed_batch,
+                embedder,
+                arg.milvus_indexing,
             )
+    t_end = timeit.default_timer()
+    log.debug(f"Embedding save {t_end - t}")
     log.info("Unmatch Embedding saved")
 
     # Save All Checksum on the mismatch checksum
