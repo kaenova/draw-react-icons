@@ -49,11 +49,6 @@ arg_parser.add_argument(
     default=True,
 )
 arg_parser.add_argument(
-    "--mysql-endpoint",
-    default="mysql+mysqldb://root:changeme@localhost:3306/draw-react-icons",
-    help="Mysql Endpoint to read and save data",
-)
-arg_parser.add_argument(
     "--milvus-indexing",
     choices=repository.MILVUS_INDEX_METHOD_OPTS,
     default=repository.MILVUS_INDEX_METHOD_OPTS[0],
@@ -78,7 +73,7 @@ arg_parser.add_argument(
     "--milvus-upload-batch",
     help="Milvus number of batch to be uploaded, for rough estimation there are 44000 icons",
     type=int,
-    default=1000,
+    default=2000,
 )
 
 
@@ -98,29 +93,49 @@ if "__main__" == __name__:
     # Initialize Repository
     log.info("Initializing Repository 📚")
     repository = repository.ApplicationRepository(
-        arg.mysql_endpoint,
         arg.milvus_endpoint,
         arg.milvus_api_key,
         arg.milvus_db,
     )
     log.info("Repository initialize")
 
-    # Check collection exist
+    # Prepare Milvus collection
     log.info("Checking collection name on repository")
-    base_collection_name = embedder.name()
-    if not repository.collection_exists(embedder, arg.milvus_indexing):
+    embedding_collection_name = repository.get_embedding_collection_name(
+        embedder, arg.milvus_indexing
+    )
+    checksum_collection_name = repository.get_checksum_collection_name()
+
+    # Check if all collection exist
+    embeddings_collection = repository.collection_exists(embedding_collection_name)
+    checksum_collection = repository.collection_exists(checksum_collection_name)
+    if embeddings_collection is None:
         log.info(
-            f"Collection not exist, creating collection of {base_collection_name} with {arg.milvus_indexing} indexing"
+            f"Embedding Collection not exist, creating collection of {embedding_collection_name} with {arg.milvus_indexing} indexing"
         )
-        repository.create_new_collection(
+        embeddings_collection = repository.create_new_embedding_collection(
             embedder,
             arg.milvus_indexing,
         )
-        log.info("Collection created")
-    if not repository.collection_is_loaded(embedder, arg.milvus_indexing):
-        log.info("Collection is not loadded, loading the collection")
-        repository.load_collection(embedder, arg.milvus_indexing)
-        log.info("Collection loaded")
+        log.info("Embedding Collection created")
+
+    if checksum_collection is None:
+        log.info(
+            f"Checksum Collection not exist, creating collection of {checksum_collection_name}"
+        )
+        checksum_collection = repository.craete_new_checksum_collection()
+        log.info("Checksum Collection created")
+
+    # Check if all collection loaded
+    if not repository.collection_is_loaded(embeddings_collection):
+        log.info("Embeddings Collection is not loadded, loading the collection")
+        repository.load_collection(embeddings_collection)
+        log.info("Embeddings Collection loaded")
+    if not repository.collection_is_loaded(checksum_collection):
+        log.info("Checksum Collection is not loadded, loading the collection")
+        repository.load_collection(checksum_collection)
+        log.info("Checksum Collection loaded")
+
     log.info("Collection checked")
 
     # Unzip data
@@ -149,7 +164,10 @@ if "__main__" == __name__:
     # check mismatch checksum folder
     mismatch_checksum_parent_id: "typing.List[str]" = []
     for parent_id in hash_stats:
-        checksum = repository.get_checksum_parent_icon(parent_id)
+        checksum = repository.get_checksum_parent_icon(
+            checksum_collection,
+            parent_id,
+        )
         if checksum is None or checksum != hash_stats[parent_id]:
             mismatch_checksum_parent_id.append(parent_id)
 
@@ -182,8 +200,7 @@ if "__main__" == __name__:
         ):
             repository.add_or_update_icon(
                 icon_embed_batch,
-                embedder,
-                arg.milvus_indexing,
+                embeddings_collection,
             )
     t_end = timeit.default_timer()
     log.debug(f"Embedding save {t_end - t}")
@@ -193,7 +210,9 @@ if "__main__" == __name__:
     log.info("Saving new checksum on database 📦")
     t = timeit.default_timer()
     for parent_id in mismatch_checksum_parent_id:
-        repository.add_or_update_icon_checksum(parent_id, hash_stats[parent_id])
+        repository.add_or_update_icon_checksum(
+            checksum_collection, parent_id, hash_stats[parent_id]
+        )
     t_end = timeit.default_timer()
     log.debug(f"Checksum saver {t_end - t}")
     log.info("New checksum saved 📦")
