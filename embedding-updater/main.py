@@ -4,7 +4,6 @@
 import os
 import pathlib
 import utils
-import argparse
 import embedder
 import core
 import timeit
@@ -21,64 +20,13 @@ DEFAULT_ZIP_PATH = os.path.join(script_path, "dist.zip")
 # Embedder
 EMBEDDER_DICT = {"pixel": embedder.PixelEmbedder}
 
-arg_parser = argparse.ArgumentParser(
-    "Embedding Updater",
-    "This program is a runner to run an embedding inference for an react-icons image that are bundled in a zip file. The image of the emdeds need to have a background of black and the foreground of white. You can invert the image using --invert argument",
-)
-arg_parser.add_argument(
-    "-i",
-    default=DEFAULT_ZIP_PATH,
-    help="Path of input zip file",
-)
-arg_parser.add_argument(
-    "--embedder",
-    choices=list(EMBEDDER_DICT.keys()),
-    default=list(EMBEDDER_DICT.keys())[0],
-    help="Embedder model to embed the image",
-)
-arg_parser.add_argument(
-    "--invert",
-    help="Invert image black and white",
-    type=bool,
-    default=False,
-)
-arg_parser.add_argument(
-    "--normalize",
-    help="True image to [0..1] range",
-    type=bool,
-    default=True,
-)
-arg_parser.add_argument(
-    "--milvus-indexing",
-    choices=repository.MILVUS_INDEX_METHOD_OPTS,
-    default=repository.MILVUS_INDEX_METHOD_OPTS[0],
-    help="Indexing method on milvus if collection is not created",
-)
-arg_parser.add_argument(
-    "--milvus-endpoint",
-    help="Milvus zilliz endpoint URI",
-    required=True,
-)
-arg_parser.add_argument(
-    "--milvus-api-key",
-    help="Milvus zilliz API Key",
-    required=True,
-)
-arg_parser.add_argument(
-    "--milvus-db",
-    help="Milvus Database",
-    required=True,
-)
-arg_parser.add_argument(
-    "--milvus-upload-batch",
-    help="Milvus number of batch to be uploaded, for rough estimation there are 44000 icons",
-    type=int,
-    default=2000,
-)
-
 
 if "__main__" == __name__:
-    arg = arg_parser.parse_args()
+    arg = utils.parse_arg(
+        DEFAULT_ZIP_PATH,
+        EMBEDDER_DICT,
+        repository.MILVUS_INDEX_METHOD_OPTS,
+    )
 
     log.info("starting script 🔥")
     log.info(
@@ -96,47 +44,10 @@ if "__main__" == __name__:
         arg.milvus_endpoint,
         arg.milvus_api_key,
         arg.milvus_db,
+        embedder,
+        arg.milvus_indexing
     )
     log.info("Repository initialize")
-
-    # Prepare Milvus collection
-    log.info("Checking collection name on repository")
-    embedding_collection_name = repository.get_embedding_collection_name(
-        embedder, arg.milvus_indexing
-    )
-    checksum_collection_name = repository.get_checksum_collection_name()
-
-    # Check if all collection exist
-    embeddings_collection = repository.collection_exists(embedding_collection_name)
-    checksum_collection = repository.collection_exists(checksum_collection_name)
-    if embeddings_collection is None:
-        log.info(
-            f"Embedding Collection not exist, creating collection of {embedding_collection_name} with {arg.milvus_indexing} indexing"
-        )
-        embeddings_collection = repository.create_new_embedding_collection(
-            embedder,
-            arg.milvus_indexing,
-        )
-        log.info("Embedding Collection created")
-
-    if checksum_collection is None:
-        log.info(
-            f"Checksum Collection not exist, creating collection of {checksum_collection_name}"
-        )
-        checksum_collection = repository.craete_new_checksum_collection()
-        log.info("Checksum Collection created")
-
-    # Check if all collection loaded
-    if not repository.collection_is_loaded(embeddings_collection):
-        log.info("Embeddings Collection is not loadded, loading the collection")
-        repository.load_collection(embeddings_collection)
-        log.info("Embeddings Collection loaded")
-    if not repository.collection_is_loaded(checksum_collection):
-        log.info("Checksum Collection is not loadded, loading the collection")
-        repository.load_collection(checksum_collection)
-        log.info("Checksum Collection loaded")
-
-    log.info("Collection checked")
 
     # Unzip data
     log.info("Extracting zip 📦")
@@ -165,7 +76,6 @@ if "__main__" == __name__:
     mismatch_checksum_parent_id: "typing.List[str]" = []
     for parent_id in hash_stats:
         checksum = repository.get_checksum_parent_icon(
-            checksum_collection,
             parent_id,
         )
         if checksum is None or checksum != hash_stats[parent_id]:
@@ -200,7 +110,6 @@ if "__main__" == __name__:
         ):
             repository.add_or_update_icon(
                 icon_embed_batch,
-                embeddings_collection,
             )
     t_end = timeit.default_timer()
     log.debug(f"Embedding save {t_end - t}")
@@ -211,7 +120,8 @@ if "__main__" == __name__:
     t = timeit.default_timer()
     for parent_id in mismatch_checksum_parent_id:
         repository.add_or_update_icon_checksum(
-            checksum_collection, parent_id, hash_stats[parent_id]
+            parent_id,
+            hash_stats[parent_id],
         )
     t_end = timeit.default_timer()
     log.debug(f"Checksum saver {t_end - t}")

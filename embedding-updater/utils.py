@@ -3,7 +3,67 @@ import zipfile
 import typing
 import threading
 import queue
+import argparse
+
 from checksumdir import dirhash
+
+
+def parse_arg(default_zip_path, embedder_dict, milvus_index_opts):
+    arg_parser = argparse.ArgumentParser(
+        "Embedding Updater",
+        "This program is a runner to run an embedding inference for an react-icons image that are bundled in a zip file. The image of the emdeds need to have a background of black and the foreground of white. You can invert the image using --invert argument",
+    )
+    arg_parser.add_argument(
+        "-i",
+        default=default_zip_path,
+        help="Path of input zip file",
+    )
+    arg_parser.add_argument(
+        "--embedder",
+        choices=list(embedder_dict.keys()),
+        default=list(embedder_dict.keys())[0],
+        help="Embedder model to embed the image",
+    )
+    arg_parser.add_argument(
+        "--invert",
+        help="Invert image black and white",
+        type=bool,
+        default=False,
+    )
+    arg_parser.add_argument(
+        "--normalize",
+        help="True image to [0..1] range",
+        type=bool,
+        default=True,
+    )
+    arg_parser.add_argument(
+        "--milvus-indexing",
+        choices=milvus_index_opts,
+        default=milvus_index_opts[0],
+        help="Indexing method on milvus if collection is not created",
+    )
+    arg_parser.add_argument(
+        "--milvus-endpoint",
+        help="Milvus zilliz endpoint URI",
+        required=True,
+    )
+    arg_parser.add_argument(
+        "--milvus-api-key",
+        help="Milvus zilliz API Key",
+        required=True,
+    )
+    arg_parser.add_argument(
+        "--milvus-db",
+        help="Milvus Database",
+        required=True,
+    )
+    arg_parser.add_argument(
+        "--milvus-upload-batch",
+        help="Milvus number of batch to be uploaded, for rough estimation there are 44000 icons",
+        type=int,
+        default=2000,
+    )
+    return arg_parser.parse_args()
 
 
 def extract_zip(zip_path: "str", out_path: "str"):

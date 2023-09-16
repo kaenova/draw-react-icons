@@ -1,14 +1,10 @@
 import pymilvus
 import core
-import github
 import typing
 import json
 
 from logger import log
-from sqlalchemy.orm import Session
-from .model import Base, IconChecksum
 from pymilvus.client.types import LoadState
-from sqlalchemy import create_engine, select
 
 MILVUS_INDEX_METHOD = typing.Literal["L2", "IP"]
 MILVUS_INDEX_METHOD_OPTS = list(typing.get_args(MILVUS_INDEX_METHOD))
@@ -22,6 +18,8 @@ class ApplicationRepository:
         milvus_uri: "str",
         milvus_api_key: "str",
         milvus_db: "str",
+        embedder: core.Embedder,
+        indexing_metric: "MILVUS_INDEX_METHOD" = "L2",
     ) -> None:
         # Connect milvus
         self.milvus_cleint_alias = "default"
@@ -32,52 +30,46 @@ class ApplicationRepository:
             db_name=milvus_db,
         )
 
-    def get_checksum_parent_icon(
-        self, collection: pymilvus.Collection, parent_id: "str"
-    ) -> "str | None":
-        search_query = f"id in ['{parent_id}']"
-        log.debug(f"Repository: search query {search_query}")
-
-        # Search for entities
-        res = collection.query(
-            expr=search_query,
-            output_fields=[
-                "checksums",
-            ],
+        # Prepare Milvus collection
+        log.info("Checking collection")
+        embedding_collection_name = self.get_embedding_collection_name(
+            embedder, indexing_metric
         )
+        checksum_collection_name = self.get_checksum_collection_name()
 
-        log.debug(
-            f"Repository: Get Checksum query: {search_query} | Get Checksum resulst: {res}"
-        )
+        # Check if all collection exist
+        embeddings_collection = self.collection_exists(embedding_collection_name)
+        checksum_collection = self.collection_exists(checksum_collection_name)
+        if embeddings_collection is None:
+            log.info(
+                f"Embedding Collection not exist, creating collection of {embedding_collection_name} with {indexing_metric} indexing"
+            )
+            embeddings_collection = self.create_new_embedding_collection(
+                embedder,
+                indexing_metric,
+            )
+            log.info("Embedding Collection created")
 
-        if len(res) == 0:
-            return None
+        if checksum_collection is None:
+            log.info(
+                f"Checksum Collection not exist, creating collection of {checksum_collection_name}"
+            )
+            checksum_collection = self.craete_new_checksum_collection()
+            log.info("Checksum Collection created")
 
-        return res[0]["checksums"]
+        # Check if all collection loaded
+        if not self.collection_is_loaded(embeddings_collection):
+            log.info("Embeddings Collection is not loadded, loading the collection")
+            self.load_collection(embeddings_collection)
+            log.info("Embeddings Collection loaded")
+        if not self.collection_is_loaded(checksum_collection):
+            log.info("Checksum Collection is not loadded, loading the collection")
+            self.load_collection(checksum_collection)
+            log.info("Checksum Collection loaded")
 
-    def add_or_update_icon_checksum(
-        self, collection: pymilvus.Collection, parent_id: "str", checksum: "str"
-    ):
-        search_query = f"id in ['{parent_id}']"
-        log.debug(f"Repository: search query {search_query}")
-        # Search for entities
-        res = collection.query(
-            expr=search_query,
-            output_fields=[
-                "id",
-            ],
-        )
-        log.debug(
-            f"Repository: Get Checksum query: {search_query} | Get Checksum resulst: {res}"
-        )
-        if len(res) != 0:
-            # Delete available data
-            collection.delete(search_query)
-
-        # Add Entity
-        entities = [[parent_id], [checksum], [[0 for _ in range(32)]]]  # Dummy vector
-        collection.insert(entities)
-        collection.flush()
+        self.checksum_collection = checksum_collection
+        self.embedding_collection = embeddings_collection
+        log.info("Collection checked")
 
     def collection_exists(self, collection_name: str) -> pymilvus.Collection | None:
         collection_exist = pymilvus.utility.has_collection(collection_name)
@@ -206,18 +198,71 @@ class ApplicationRepository:
         collection.load()
         pymilvus.utility.wait_for_loading_complete(collection.name)
 
+    def get_icon_entity_id(self, icon: core.IconData) -> "str":
+        return f"{icon.parent_name}_{icon.icon_name}"
+
+    def get_embedding_collection_name(
+        self, collection_name: core.Embedder, indexing: str
+    ) -> str:
+        return f"{collection_name.name()}_{indexing}"
+
+    def get_checksum_collection_name(self) -> "str":
+        return self.checksum_collection_name
+
+    def get_checksum_parent_icon(self, parent_id: "str") -> "str | None":
+        search_query = f"id in ['{parent_id}']"
+        log.debug(f"Repository: search query {search_query}")
+
+        # Search for entities
+        res = self.checksum_collection.query(
+            expr=search_query,
+            output_fields=[
+                "checksums",
+            ],
+        )
+
+        log.debug(
+            f"Repository: Get Checksum query: {search_query} | Get Checksum resulst: {res}"
+        )
+
+        if len(res) == 0:
+            return None
+
+        return res[0]["checksums"]
+
+    def add_or_update_icon_checksum(self, parent_id: "str", checksum: "str"):
+        search_query = f"id in ['{parent_id}']"
+        log.debug(f"Repository: search query {search_query}")
+        # Search for entities
+        res = self.checksum_collection.query(
+            expr=search_query,
+            output_fields=[
+                "id",
+            ],
+        )
+        log.debug(
+            f"Repository: Get Checksum query: {search_query} | Get Checksum resulst: {res}"
+        )
+        if len(res) != 0:
+            # Delete available data
+            self.checksum_collection.delete(search_query)
+
+        # Add Entity
+        entities = [[parent_id], [checksum], [[0 for _ in range(32)]]]  # Dummy vector
+        self.checksum_collection.insert(entities)
+        self.checksum_collection.flush()
+
     # TODO: Refactor this code so that we can do batched embeded_icon inputs
     def add_or_update_icon(
         self,
         embeded_icon: typing.List[core.IconEmbeddings],
-        collection: pymilvus.Collection,
     ):
         ids = [self.get_icon_entity_id(icon.icon_data) for icon in embeded_icon]
         search_query = "id in [" + ",".join([f"'{id}'" for id in ids]) + "]"
         log.debug(f"Repository: search query {search_query}")
 
         # Search for entities
-        res = collection.query(
+        res = self.embedding_collection.query(
             expr=search_query,
             output_fields=[
                 "id",
@@ -225,7 +270,7 @@ class ApplicationRepository:
         )
         if len(res) != 0:
             # Delete available data
-            collection.delete(search_query)
+            self.embedding_collection.delete(search_query)
 
         # Add Entity
         parent_names = [icon.icon_data.parent_name for icon in embeded_icon]
@@ -237,16 +282,5 @@ class ApplicationRepository:
             icon_name,
             embeddings,
         ]
-        collection.insert(entities)
-        collection.flush()
-
-    def get_icon_entity_id(self, icon: core.IconData) -> "str":
-        return f"{icon.parent_name}_{icon.icon_name}"
-
-    def get_embedding_collection_name(
-        self, collection_name: core.Embedder, indexing: str
-    ) -> str:
-        return f"{collection_name.name()}_{indexing}"
-
-    def get_checksum_collection_name(self) -> "str":
-        return self.checksum_collection_name
+        self.embedding_collection.insert(entities)
+        self.embedding_collection.flush()
