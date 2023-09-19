@@ -1,4 +1,3 @@
-huggingface_hub
 Pillow
 checksumdir
 grpcio-tools
