@@ -1,0 +1,9 @@
+tensorflow==2.13.0
+huggingface_hub
+Pillow
+checksumdir
+protobuf==3.20.0
+grpcio-tools
+pymilvus==2.3.0
+PyGithub
+Flask==2.2.2
