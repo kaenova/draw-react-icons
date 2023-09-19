@@ -1,6 +1,6 @@
 import core
 import numpy as np
-import tensorflow as tf
+import cv2
 
 
 class PixelEmbedder(core.Embedder):
@@ -11,12 +11,11 @@ class PixelEmbedder(core.Embedder):
 
     def embeds(self, icon: np.ndarray) -> list:
         data = icon
-        data = tf.image.resize(
+        data = cv2.resize(
             data,
             self.shape_size,
-            antialias=True,
         )
-        return data.numpy().flatten().tolist()
+        return data.flatten().tolist()
 
     def name(self) -> str:
         return self.__class__.__name__

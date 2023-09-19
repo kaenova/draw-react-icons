@@ -1,4 +1,3 @@
-tensorflow==2.13.0
 huggingface_hub
 Pillow
 checksumdir
@@ -6,3 +5,4 @@ grpcio-tools
 pymilvus==2.3.0
 PyGithub
 Flask==2.2.2
+opencv-python-headless==4.8.0.76
