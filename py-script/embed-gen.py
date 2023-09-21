@@ -6,23 +6,14 @@ import core
 import utils
 import timeit
 import typing
-import pathlib
-import embedder
 import repository
 
 from core import log
-
-# Default ZIP input
-script_path = pathlib.Path(__file__).parent.resolve()
-OUTPUT_ZIP_FOLDER_PATH = os.path.join(script_path, "dist")
-DEFAULT_ZIP_PATH = os.path.join(script_path, "dist.zip")
-
-# Embedder
-EMBEDDER_DICT = {"pixel": embedder.pixel_embedder.PixelEmbedder}
+from constants import *
 
 
 if "__main__" == __name__:
-    arg = utils.parse_arg(
+    arg = utils.parse_arg_embed_generator(
         DEFAULT_ZIP_PATH,
         EMBEDDER_DICT,
         repository.MILVUS_INDEX_METHOD_OPTS,
@@ -35,7 +26,7 @@ if "__main__" == __name__:
 
     # Initialize embedder
     log.info("Initializing Embedder")
-    embedder = EMBEDDER_DICT[arg.embedder]()
+    embedder = EMBEDDER_DICT[arg.embedder]
     log.info("Embedder Initialized")
 
     # Initialize Repository

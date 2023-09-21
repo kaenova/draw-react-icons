@@ -17,8 +17,9 @@ class PixelEmbedder(core.Embedder):
         )
         return data.flatten().tolist()
 
-    def name(self) -> str:
-        return self.__class__.__name__
+    @staticmethod
+    def name() -> str:
+        return "PixelEmbedder"
 
     def num_dimensions(self) -> int:
         return self.shape_size[0] * self.shape_size[1]

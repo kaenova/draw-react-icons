@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package drawreacticons;
+
+
+message ImageQuery {
+  string base64image = 1;
+  string collectionName = 2;
+  bool invertImage = 3;
+  bool normalizeImage = 4;
+}
+
+message Empty {
+
+}
+
+message Icon {
+  string iconID = 1;
+  string parentID = 2;
+  string iconName = 3;
+}
+
+message Icons {
+  repeated Icon icons =1;
+}
+
+message Collections {
+  repeated Collection collections = 1; 
+}
+
+message Collection {
+  string embedder =1;
+  string index = 2;
+  string collectionName = 3;
+}
+
+service IconEstimator {
+  rpc QueryImage(ImageQuery) returns (Icons);
+
+  rpc GetCollectionInfo(Empty) returns (Collections);
+}

@@ -1,6 +1,7 @@
 Pillow
 checksumdir
 grpcio-tools
+grpcio-reflection
+numpy
 pymilvus==2.3.0
-Flask==2.2.2
 opencv-python-headless==4.8.0.76

@@ -32,17 +32,18 @@ class ApplicationRepository:
 
         # Prepare Milvus collection
         log.info("Checking collection")
-        embedding_collection_name = self.get_embedding_collection_name(
-            embedder, indexing_metric
+        collection_info = core.CollectionInformation(
+            embedder_name=embedder.name(),
+            index=indexing_metric,
         )
         checksum_collection_name = self.get_checksum_collection_name()
 
         # Check if all collection exist
-        embeddings_collection = self.collection_exists(embedding_collection_name)
+        embeddings_collection = self.collection_exists(collection_info.full_name)
         checksum_collection = self.collection_exists(checksum_collection_name)
         if embeddings_collection is None:
             log.info(
-                f"Embedding Collection not exist, creating collection of {embedding_collection_name} with {indexing_metric} indexing"
+                f"Embedding Collection not exist, creating collection of {collection_info.full_name} with {indexing_metric} indexing"
             )
             embeddings_collection = self.create_new_embedding_collection(
                 embedder,
@@ -135,9 +136,9 @@ class ApplicationRepository:
         Only creates collection.
         Before doing query, you need to load it using `load_collection()` methods
         """
-        collection_name = self.get_embedding_collection_name(
-            embedder,
-            indexing_metric,
+        collection_info = core.CollectionInformation(
+            embedder_name=embedder.name(),
+            index=indexing_metric,
         )
         id = pymilvus.FieldSchema(
             name="id",
@@ -162,15 +163,10 @@ class ApplicationRepository:
         )
         schema = pymilvus.CollectionSchema(
             fields=[id, parent_name, icon_name, embedding],
-            description=json.dumps(
-                {
-                    "embedder": embedder.name(),
-                    "index": indexing_metric,
-                }
-            ),
+            description=collection_info.to_json(),
         )
         collection = pymilvus.Collection(
-            collection_name,
+            collection_info.full_name,
             schema=schema,
             using=self.milvus_cleint_alias,
         )
@@ -202,9 +198,12 @@ class ApplicationRepository:
         return f"{icon.parent_name}_{icon.icon_name}"
 
     def get_embedding_collection_name(
-        self, collection_name: core.Embedder, indexing: str
+        self, embedder: core.Embedder, indexing: str
     ) -> str:
-        return f"{collection_name.name()}_{indexing}"
+        collection_info = core.CollectionInformation(
+            embedder_name=embedder.name(), index=indexing
+        )
+        return collection_info.full_name
 
     def get_checksum_collection_name(self) -> "str":
         return self.checksum_collection_name
