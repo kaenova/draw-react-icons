@@ -1,7 +1,7 @@
 # Installing all lib
 node-lib:
 	npm install -g pnpm
-	cd icons-image-generator && npm install && cd ..
+	cd node-script/image-generator && npm install && cd ..
 	cd web && pnpm install && cd ..
 
 python-lib:
