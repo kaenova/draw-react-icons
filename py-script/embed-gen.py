@@ -1,6 +1,10 @@
 # NOTE: If you wnat to develop this, make sure you have dist.zip inside embedding-updater folder
 # Download the dist.zip through here: https://drive.google.com/file/d/13Fnm3ingRAmDnhu2P8p8wROBfhbD7QwL/view?usp=sharing
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 import os
 import core
 import utils

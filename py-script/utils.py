@@ -45,17 +45,17 @@ def parse_arg_embed_generator(default_zip_path, embedder_dict, milvus_index_opts
     arg_parser.add_argument(
         "--milvus-endpoint",
         help="Milvus zilliz endpoint URI",
-        required=True,
+        default=os.environ["MILVUS_ENDPOINT"],
     )
     arg_parser.add_argument(
         "--milvus-api-key",
         help="Milvus zilliz API Key",
-        required=True,
+        default=os.environ["MILVUS_API_KEY"],
     )
     arg_parser.add_argument(
         "--milvus-db",
         help="Milvus Database",
-        required=True,
+        default=os.environ["MILVUS_DB"],
     )
     arg_parser.add_argument(
         "--milvus-upload-batch",
