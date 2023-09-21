@@ -28,7 +28,7 @@ def parse_arg_embed_generator(default_zip_path, embedder_dict, milvus_index_opts
         "--invert",
         help="Invert image black and white",
         type=bool,
-        default=False,
+        default=True,
     )
     arg_parser.add_argument(
         "--normalize",
