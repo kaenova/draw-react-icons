@@ -36,6 +36,10 @@ jobs:
     needs: ["generate-image"]
     runs-on: ubuntu-20.04
     name: Update Icon Embedding to Database
+    env:
+      MILVUS_ENDPOINT: ${{ secrets.MILVUS_ENDPOINT }}
+      MILVUS_API_KEY: ${{ secrets.MILVUS_API_KEY }}
+      MILVUS_DB: ${{ secrets.MILVUS_DB }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -56,9 +60,5 @@ jobs:
           make python-lib
 
       - name: Update Embedding Database
-        env:
-          ENDPOINT: ${{ secrets.MILVUS_ENDPOINT }}
-          KEY: ${{ secrets.MILVUS_API_KEY }}
-          DB: ${{ secrets.MILVUS_DB }}
         run: |
-          python py-script/api.py --milvus-endpoint "$ENDPOINT" --milvus-api-key "$KEY"  --milvus-db "$DB"
+          python py-script/embed-gen.py
