@@ -2,3 +2,4 @@ Dockerfile
 .dockerignore
 dist*
 __pycache__
+.env

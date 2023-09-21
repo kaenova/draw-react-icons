@@ -2,7 +2,7 @@ name: Update Icon Database
 
 on:
   schedule:
-    - cron: '0 0 * * FRI'
+    - cron: "0 0 * * FRI"
   workflow_dispatch:
 
 jobs:
@@ -13,43 +13,43 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Setup Node 
+      - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: '17.9.1'
-      
+          node-version: "17.9.1"
+
       - name: Install Library
         run: |
           make node-lib
-      
+
       - name: Generate Image
         run: |
-          node icons-image-generator/index.js --size 50 --color black --pad_size 50
-      
+          node node-script/image-generator/index.js --size 50 --color black --pad_size 50
+
       - name: Upload artifact - react-icons-image
         uses: actions/upload-artifact@v3
         with:
           name: react-icons-image
-          path:  icons-image-generator/dist.zip
-  
+          path: node-script/image-generator/dist.zip
+
   update-database-embedding:
-    needs: ['generate-image']
+    needs: ["generate-image"]
     runs-on: ubuntu-20.04
     name: Update Icon Embedding to Database
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      
+
       - name: Download artifact - react-icons-image
         uses: actions/download-artifact@v3
         with:
           name: react-icons-image
-          path: embedding-updater/
+          path: py-script/
 
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10' 
+          python-version: "3.11"
 
       - name: Install Library
         run: |
@@ -57,4 +57,4 @@ jobs:
 
       - name: Update Embedding Database
         run: |
-          python embedding-updater/main.py
+          python py-script/api.py --milvus-endpoint "${{ secrets.MILVUS_ENDPOINT }}" --milvus-api-key "${{ secrets.MILVUS_API_KEY }}"  --milvus-db "${{ secrets.MILVUS_DB }}"

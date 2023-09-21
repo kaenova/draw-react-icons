@@ -8,4 +8,6 @@ RUN pip install -r requirements.txt
 
 EXPOSE 1323
 
+ENV PYTHONUNBUFFERED=1
+
 CMD ["python", "api.py"]

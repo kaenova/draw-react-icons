@@ -11,7 +11,7 @@ lib: node-lib python-lib
 
 # Generate jpg image
 image-gen: node-lib
-	node icons-image-generator/index.js --size 50 --color black --pad_size 50 
+	node node-script/image-generator/index.js --size 50 --color black --pad_size 50 
 
 # Update Embedding
 update-embed: python-lib
