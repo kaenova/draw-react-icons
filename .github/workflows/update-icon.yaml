@@ -56,5 +56,9 @@ jobs:
           make python-lib
 
       - name: Update Embedding Database
+        env:
+          ENDPOINT: ${{ secrets.MILVUS_ENDPOINT }}
+          KEY: ${{ secrets.MILVUS_API_KEY }}
+          DB: ${{ secrets.MILVUS_DB }}
         run: |
-          python py-script/api.py --milvus-endpoint "${{ secrets.MILVUS_ENDPOINT }}" --milvus-api-key "${{ secrets.MILVUS_API_KEY }}"  --milvus-db "${{ secrets.MILVUS_DB }}"
+          python py-script/api.py --milvus-endpoint "$ENDPOINT" --milvus-api-key "$KEY"  --milvus-db "$DB"
