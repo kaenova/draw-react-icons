@@ -10,4 +10,4 @@ EXPOSE 1323
 
 ENV PYTHONUNBUFFERED=1
 
-CMD ["uvicorn", "api:app", "--workers 10"]
+CMD ["uvicorn", "--workers", "10", "api:app"]
