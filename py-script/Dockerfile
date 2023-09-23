@@ -6,8 +6,8 @@ COPY . .
 
 RUN pip install -r requirements.txt
 
-EXPOSE 1323
+EXPOSE 8000
 
 ENV PYTHONUNBUFFERED=1
 
-CMD ["uvicorn", "--workers", "10", "api:app"]
+CMD ["uvicorn", "--workers", "10", "--host", "0.0.0.0", "api:app"]
