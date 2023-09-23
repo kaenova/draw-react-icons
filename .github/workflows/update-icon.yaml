@@ -61,4 +61,4 @@ jobs:
 
       - name: Update Embedding Database
         run: |
-          python py-script/embed-gen.py
+          python py-script/embed-gen.py --milvus-indexing IP
