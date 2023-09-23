@@ -22,7 +22,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 origins = [
-    "http://localhost:3000",
+    "https://draw-react-icons.kaenova.my.id",
 ]
 
 
