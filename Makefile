@@ -1,3 +1,6 @@
+PROTOC_GEN_TS_PATH=web\\node_modules\\.bin\\protoc-gen-ts.cmd
+RPC_NODE_OUT_DIR="web\\src\\rpc"
+
 # Installing all lib
 node-lib:
 	npm install -g pnpm
@@ -22,16 +25,11 @@ web: node-lib
 	cd web && pnpm run dev
 
 api:
-	cd py-script && python api.py
+	cd py-script && uvicorn api:app
 
-gen-grpc:
-	mkdir py-script/rpc
-	touch py-script/rpc/__init__.py
-	python -m grpc_tools.protoc -I./proto --python_out=./py-script/rpc --pyi_out=./py-script/rpc --grpc_python_out=./py-script/rpc ./proto/*.proto
-	sed -i 's/import \(\w\+\)_pb2 as \(\w\+\)__pb2/from . import \1_pb2 as \2__pb2/' py-script/rpc/*_grpc.py
-
-# You need to install grpcui and reflection on python
-# https://github.com/fullstorydev/grpcui
-# https://github.com/grpc/grpc/blob/master/doc/python/server_reflection.md
-grpc-ui:
-	grpcui -plaintext localhost:1323
+# Generate Type for TS axios client (make sure the api is running)
+# npm install openapi-typescript-codegen
+api-type:
+	curl http://127.0.0.1:8000/openapi.json > ./openapi.json
+	openapi -i openapi.json -o ./web/src/lib/py-client
+	rm ./openapi.json
