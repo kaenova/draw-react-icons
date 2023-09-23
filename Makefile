@@ -1,3 +1,5 @@
+.PHONY: all test clean
+
 PROTOC_GEN_TS_PATH=web\\node_modules\\.bin\\protoc-gen-ts.cmd
 RPC_NODE_OUT_DIR="web\\src\\rpc"
 
@@ -13,15 +15,15 @@ python-lib:
 lib: node-lib python-lib
 
 # Generate jpg image
-image-gen: node-lib
+image-gen: 
 	node node-script/image-generator/index.js --size 50 --color black --pad_size 50 
 
 # Update Embedding
-update-embed: python-lib
+update-embed:
 	python py-script/embed-gen.py
 
 # Run Web
-web: node-lib
+web-dev:
 	cd web && pnpm run dev
 
 api:
@@ -31,5 +33,8 @@ api:
 # npm install openapi-typescript-codegen
 api-type:
 	curl http://127.0.0.1:8000/openapi.json > ./openapi.json
-	openapi -i openapi.json -o ./web/src/lib/py-client
+	openapi \
+		-i openapi.json \
+		-o ./web/src/lib/py-client \
+		--name PyAPIClient \
 	rm ./openapi.json

@@ -10,23 +10,36 @@
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.9.3",
+    "@hcaptcha/react-hcaptcha": "^1.8.1",
+    "@loadable/component": "^5.15.3",
     "@types/node": "20.4.8",
     "@types/react": "18.2.18",
     "@types/react-dom": "18.2.7",
     "autoprefixer": "10.4.14",
+    "babel-plugin-codegen": "^4.1.5",
+    "babel-plugin-macros": "^3.1.0",
+    "clsx": "^2.0.0",
     "grpc-tools": "^1.12.4",
     "grpc_tools_node_protoc_ts": "^5.3.3",
     "next": "13.4.12",
+    "next-seo": "^6.1.0",
     "postcss": "8.4.27",
     "react": "18.2.0",
     "react-dom": "18.2.0",
+    "react-hot-toast": "^2.4.1",
+    "react-icons": "^4.11.0",
     "react-sketch-canvas": "^6.2.0",
+    "react-spinners": "^0.13.8",
     "tailwind-merge": "^1.14.0",
     "tailwindcss": "3.3.3",
+    "tiny-skeleton-loader-react": "^1.2.1",
     "typescript": "5.1.6",
     "yup": "^1.2.0"
   },
   "devDependencies": {
-    "@grpc/proto-loader": "^0.7.10"
+    "@grpc/proto-loader": "^0.7.10",
+    "@types/loadable__component": "^5.13.5",
+    "axios": "^1.5.0",
+    "form-data": "4.x"
   }
 }
