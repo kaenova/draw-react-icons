@@ -11,19 +11,22 @@ import IconLoading from './IconLoading';
 function IconComponent({ icon: Icon, name }) {
   function copyClipboard() {
     try {
-      navigator.clipboard.writeText(name)
-      toast.success("Icon name copied to clipboard")
+      navigator.clipboard.writeText(name);
+      toast.success('Icon name copied to clipboard');
     } catch (e) {
-      toast.error("Failed to copy to clipboard")
+      toast.error('Failed to copy to clipboard');
     }
   }
 
   return (
-    <button onClick={copyClipboard} className="bg-brand/20 rounded-md p-2 flex flex-col items-center hover:bg-brand/10">
-      <div className='bg-white rounded-md p-1'>
-      <Icon size={30} />
+    <button
+      onClick={copyClipboard}
+      className="bg-brand/20 rounded-md p-2 flex flex-col items-center hover:bg-brand/10"
+    >
+      <div className="bg-white rounded-md p-1">
+        <Icon size={30} />
       </div>
-      <p className='font-bold text-sm tracking-wide'>{name}</p>
+      <p className="font-bold text-sm tracking-wide">{name}</p>
     </button>
   );
 }
@@ -69,7 +72,7 @@ export default function Results({
 
   if (!base64Image || !collectionName) {
     return (
-      <div>
+      <div className="text-center">
         <p>Please draw and choose the available methods</p>
       </div>
     );
@@ -94,7 +97,7 @@ export default function Results({
       });
       setIcons(res.data);
     } catch (e) {
-      toast.error('Failed to fetcFh related icon');
+      toast.error('Failed to fetch related icon');
       setIcons('err');
     }
   }
@@ -117,7 +120,7 @@ export default function Results({
   }
 
   if (Icons == 'err') {
-    return <div>Error, please try again</div>;
+    return <div className="text-center">Error, please try again</div>;
   }
 
   const iconNames = Icons.map((v) => v.iconName);

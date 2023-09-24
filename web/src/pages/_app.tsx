@@ -9,11 +9,11 @@ export default function App({ Component, pageProps }: AppProps) {
   return (
     <AuthProvider>
       <NextSeo
-        title="Search Your Imaginary Icons - Draw React Icons"
+        title="Search the Icons you Imagine - Draw React Icons"
         description="Search your most wanted icons with your imagination using Draw React Icons"
         openGraph={{
-          url: 'https://www.url.ie/a',
-          title: 'Search Your Imaginary Icons - Draw React Icons',
+          url: 'https://draw-react-icons.kaenova.my.id',
+          title: 'Search the Icons you Imagine - Draw React Icons',
           description:
             'Search your most wanted icons with your imagination using Draw React Icons',
           images: [{ url: '/thumb.png' }],

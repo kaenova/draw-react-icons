@@ -1,6 +1,4 @@
 import React from 'react';
-import ReactIcon from '../components/ReactIcon';
-import { twMerge } from 'tailwind-merge';
 import { ReactSketchCanvas, ReactSketchCanvasRef } from 'react-sketch-canvas';
 import useDebounce from '../utils/useDebounce';
 import HCaptcha from '@hcaptcha/react-hcaptcha';
@@ -12,6 +10,7 @@ import { InferGetServerSidePropsType } from 'next';
 import { Collection } from '@/lib/api/types';
 import MainButton from '@/components/MainButton';
 import Results from '@/components/Results';
+import Header from '@/components/Header';
 
 export default function Home({
   collections,
@@ -63,43 +62,22 @@ export default function Home({
 
   if (AuthLoading === null) {
     return (
-      <main className="flex min-h-screen flex-col items-center p-24 py-10 gap-5">
-        <div key="title" className="flex flex-row items-center gap-4">
-          <ReactIcon />
-          <span className="text-2xl text-brand">
-            <span className={twMerge('text-4xl', 'font-[Caveat]')}>draw-</span>
-            react-icons
-          </span>
-        </div>
+      <Header>
         <LoadingWithTitle>Authenticating</LoadingWithTitle>
-      </main>
+      </Header>
     );
   }
 
   if (auth?.isAuth === null) {
     return (
-      <main className="flex min-h-screen flex-col items-center p-24 py-10 gap-5">
-        <div key="title" className="flex flex-row items-center gap-4">
-          <ReactIcon />
-          <span className="text-2xl text-brand">
-            <span className={twMerge('text-4xl', 'font-[Caveat]')}>draw-</span>
-            react-icons
-          </span>
-        </div>
+      <Header>
         <LoadingWithTitle>Initializing Application</LoadingWithTitle>
-      </main>
+      </Header>
     );
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-24 py-10 gap-5">
-      <div key="title" className="flex flex-row items-center gap-4">
-        <ReactIcon />
-        <span className="text-2xl text-brand">
-          <span className={twMerge('text-4xl', 'font-[Caveat]')}>draw-</span>
-          react-icons
-        </span>
-      </div>
+    <Header className="gap-4">
       <div className="relative">
         {!auth?.isAuth && (
           <div className="absolute w-full h-full backdrop-blur-sm bg-white/50 z-10 items-center justify-center flex flex-col space-y-2">
@@ -130,7 +108,7 @@ export default function Home({
           />
           <div className="flex flex-col items-center space-y-2">
             <p>Available Methods:</p>
-            <div>
+            <div className="flex flex-wrap gap-2 justify-center items-center">
               {collections.map((v) => {
                 return (
                   <MainButton
@@ -158,7 +136,7 @@ export default function Home({
           collectionName={debounceCollection || ''}
         />
       </div>
-    </main>
+    </Header>
   );
 }
 
