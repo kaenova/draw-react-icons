@@ -34,6 +34,7 @@ jobs:
 
   generate-checksum:
     runs-on: ubuntu-20.04
+    needs: ["generate-image"]
     name: Generate React Icons Image Checksum
     env:
       QDRANT_ENDPOINT: ${{ secrets.QDRANT_ENDPOINT }}
@@ -70,7 +71,7 @@ jobs:
   update-database-embedding-pixel-dot:
     needs: ["generate-image", "generate-checksum"]
     runs-on: ubuntu-20.04
-    name: Update Icon Embedding to Database
+    name: Update Icon Embedding to Database using PixelEmbedder on Dot Product Indexing
     env:
       QDRANT_ENDPOINT: ${{ secrets.QDRANT_ENDPOINT }}
       QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
@@ -106,7 +107,7 @@ jobs:
   update-database-embedding-pixel-cosine:
     needs: ["generate-image", "generate-checksum"]
     runs-on: ubuntu-20.04
-    name: Update Icon Embedding to Database
+    name: Update Icon Embedding to Database using PixelEmbedder on Cosine Indexing
     env:
       QDRANT_ENDPOINT: ${{ secrets.QDRANT_ENDPOINT }}
       QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
@@ -142,7 +143,7 @@ jobs:
   update-database-embedding-pixel-euclid:
     needs: ["generate-image", "generate-checksum"]
     runs-on: ubuntu-20.04
-    name: Update Icon Embedding to Database
+    name: Update Icon Embedding to Database using PixelEmbedder on Euclidean Distance Indexing
     env:
       QDRANT_ENDPOINT: ${{ secrets.QDRANT_ENDPOINT }}
       QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
@@ -183,7 +184,7 @@ jobs:
         "update-database-embedding-pixel-dot",
       ]
     runs-on: ubuntu-20.04
-    name: Update Icon Embedding to Database
+    name: Update Icon Checksum to Database
     env:
       QDRANT_ENDPOINT: ${{ secrets.QDRANT_ENDPOINT }}
       QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
