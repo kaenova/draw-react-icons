@@ -5,3 +5,4 @@ dist.zip
 node_modules
 dist_temp
 .env
+mismatch_checksum.json

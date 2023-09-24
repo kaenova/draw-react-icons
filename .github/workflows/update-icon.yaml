@@ -32,14 +32,12 @@ jobs:
           name: react-icons-image
           path: node-script/image-generator/dist.zip
 
-  update-database-embedding:
-    needs: ["generate-image"]
+  generate-checksum:
     runs-on: ubuntu-20.04
-    name: Update Icon Embedding to Database
+    name: Generate React Icons Image Checksum
     env:
-      MILVUS_ENDPOINT: ${{ secrets.MILVUS_ENDPOINT }}
-      MILVUS_API_KEY: ${{ secrets.MILVUS_API_KEY }}
-      MILVUS_DB: ${{ secrets.MILVUS_DB }}
+      QDRANT_ENDPOINT: ${{ secrets.QDRANT_ENDPOINT }}
+      QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -59,6 +57,155 @@ jobs:
         run: |
           make python-lib
 
+      - name: Generate Checksum
+        run: |
+          python py-script/embed-gen.py --indexing dot
+
+      - name: Upload artifact - react-icons-image
+        uses: actions/upload-artifact@v3
+        with:
+          name: react-icons-image-checksum
+          path: py-script/mismatch_checksum.json
+
+  update-database-embedding-pixel-dot:
+    needs: ["generate-image", "generate-checksum"]
+    runs-on: ubuntu-20.04
+    name: Update Icon Embedding to Database
+    env:
+      QDRANT_ENDPOINT: ${{ secrets.QDRANT_ENDPOINT }}
+      QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download artifact - react-icons-image
+        uses: actions/download-artifact@v3
+        with:
+          name: react-icons-image
+          path: py-script/
+
+      - name: Download artifact - react-icons-image-checksum
+        uses: actions/download-artifact@v3
+        with:
+          name: react-icons-image-checksum
+          path: py-script/
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Library
+        run: |
+          make python-lib
+
       - name: Update Embedding Database
         run: |
-          python py-script/embed-gen.py --milvus-indexing IP
+          python py-script/embed-gen.py --indexing dot
+
+  update-database-embedding-pixel-cosine:
+    needs: ["generate-image", "generate-checksum"]
+    runs-on: ubuntu-20.04
+    name: Update Icon Embedding to Database
+    env:
+      QDRANT_ENDPOINT: ${{ secrets.QDRANT_ENDPOINT }}
+      QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download artifact - react-icons-image
+        uses: actions/download-artifact@v3
+        with:
+          name: react-icons-image
+          path: py-script/
+
+      - name: Download artifact - react-icons-image-checksum
+        uses: actions/download-artifact@v3
+        with:
+          name: react-icons-image-checksum
+          path: py-script/
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Library
+        run: |
+          make python-lib
+
+      - name: Update Embedding Database
+        run: |
+          python py-script/embed-gen.py --indexing cosine
+
+  update-database-embedding-pixel-euclid:
+    needs: ["generate-image", "generate-checksum"]
+    runs-on: ubuntu-20.04
+    name: Update Icon Embedding to Database
+    env:
+      QDRANT_ENDPOINT: ${{ secrets.QDRANT_ENDPOINT }}
+      QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download artifact - react-icons-image
+        uses: actions/download-artifact@v3
+        with:
+          name: react-icons-image
+          path: py-script/
+
+      - name: Download artifact - react-icons-image-checksum
+        uses: actions/download-artifact@v3
+        with:
+          name: react-icons-image-checksum
+          path: py-script/
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Library
+        run: |
+          make python-lib
+
+      - name: Update Embedding Database
+        run: |
+          python py-script/embed-gen.py --indexing euclid
+
+  update-checksum:
+    needs:
+      [
+        "update-database-embedding-pixel-euclid",
+        "update-database-embedding-pixel-cosine",
+        "update-database-embedding-pixel-dot",
+      ]
+    runs-on: ubuntu-20.04
+    name: Update Icon Embedding to Database
+    env:
+      QDRANT_ENDPOINT: ${{ secrets.QDRANT_ENDPOINT }}
+      QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download artifact - react-icons-image-checksum
+        uses: actions/download-artifact@v3
+        with:
+          name: react-icons-image-checksum
+          path: py-script/
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Library
+        run: |
+          make python-lib
+
+      - name: Update Embedding Database
+        run: |
+          python py-script/update-checksum.py

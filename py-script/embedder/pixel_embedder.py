@@ -9,7 +9,7 @@ class PixelEmbedder(core.Embedder):
     def __init__(self) -> None:
         super().__init__()
 
-    def embeds(self, icon: np.ndarray) -> list:
+    def embeds(self, icon: np.ndarray) -> list[float]:
         data = icon
         data = cv2.resize(
             data,

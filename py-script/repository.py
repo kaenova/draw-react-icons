@@ -1,137 +1,75 @@
-import pymilvus
 import typing
-import json
 import core
+import uuid
+
+import qdrant_client.conversions.common_types as qcT
 
 from core import log
-from pymilvus.client.types import LoadState
+from qdrant_client import QdrantClient
+from qdrant_client.http import models
 
-MILVUS_INDEX_METHOD = typing.Literal["L2", "IP"]
-MILVUS_INDEX_METHOD_OPTS = list(typing.get_args(MILVUS_INDEX_METHOD))
+QDRANT_INDEX_METHOD = {
+    "cosine": models.Distance.COSINE,
+    "dot": models.Distance.DOT,
+    "euclid": models.Distance.EUCLID,
+}
+
+QDRANT_INDEX_METHOD_OPTS = QDRANT_INDEX_METHOD.keys()
 
 
 class ApplicationRepository:
     checksum_collection_name = "checksums"
+    checksum_vector_dummy_length = 2
 
     def __init__(
         self,
-        milvus_uri: "str",
-        milvus_api_key: "str",
-        milvus_db: "str",
-        embedder: core.Embedder,
-        indexing_metric: "MILVUS_INDEX_METHOD" = "L2",
+        qdrant_uri: str,
+        qdrant_api_key: str,
     ) -> None:
         # Connect milvus
-        self.milvus_cleint_alias = "default"
-        pymilvus.connections.connect(
-            alias=self.milvus_cleint_alias,
-            uri=milvus_uri,
-            token=milvus_api_key,
-            db_name=milvus_db,
+        self.qdrant_client = QdrantClient(
+            url=qdrant_uri,
+            api_key=qdrant_api_key,
+            prefer_grpc=True
         )
 
-        # Prepare Milvus collection
-        log.info("Checking collection")
-        collection_info = core.CollectionInformation(
-            embedder_name=embedder.name(),
-            index=indexing_metric,
-        )
-        checksum_collection_name = self.get_checksum_collection_name()
-
-        # Check if all collection exist
-        embeddings_collection = self.collection_exists(collection_info.full_name)
-        checksum_collection = self.collection_exists(checksum_collection_name)
-        if embeddings_collection is None:
-            log.info(
-                f"Embedding Collection not exist, creating collection of {collection_info.full_name} with {indexing_metric} indexing"
-            )
-            embeddings_collection = self.create_new_embedding_collection(
-                embedder,
-                indexing_metric,
-            )
-            log.info("Embedding Collection created")
-
-        if checksum_collection is None:
-            log.info(
-                f"Checksum Collection not exist, creating collection of {checksum_collection_name}"
-            )
-            checksum_collection = self.craete_new_checksum_collection()
-            log.info("Checksum Collection created")
-
-        # Check if all collection loaded
-        if not self.collection_is_loaded(embeddings_collection):
-            log.info("Embeddings Collection is not loadded, loading the collection")
-            self.load_collection(embeddings_collection)
-            log.info("Embeddings Collection loaded")
-        if not self.collection_is_loaded(checksum_collection):
-            log.info("Checksum Collection is not loadded, loading the collection")
-            self.load_collection(checksum_collection)
-            log.info("Checksum Collection loaded")
-
-        self.checksum_collection = checksum_collection
-        self.embedding_collection = embeddings_collection
-        log.info("Collection checked")
-
-    def collection_exists(self, collection_name: str) -> pymilvus.Collection | None:
-        collection_exist = pymilvus.utility.has_collection(collection_name)
-        if not collection_exist:
+    def collection_exists(self, collection_name: str) -> qcT.CollectionInfo | None:
+        try:
+            collection = self.qdrant_client.get_collection(collection_name)
+            return collection
+        except:
             return None
-        return pymilvus.Collection(
-            name=collection_name,
-            using=self.milvus_cleint_alias,
-        )
 
     def craete_new_checksum_collection(
         self,
-    ) -> pymilvus.Collection:
+    ) -> qcT.CollectionInfo:
         """
         Only creates collection.
         Before doing query, you need to load it using `load_collection()` methods
         """
-        id = pymilvus.FieldSchema(
-            name="id",
-            dtype=pymilvus.DataType.VARCHAR,
-            is_primary=True,
-            max_length=5,
-        )
-
-        checksums = pymilvus.FieldSchema(
-            name="checksums",
-            dtype=pymilvus.DataType.VARCHAR,
-            max_length=32,
-        )
-
-        dummy_embedding = pymilvus.FieldSchema(
-            name="embedding",
-            dtype=pymilvus.DataType.FLOAT_VECTOR,
-            dim=32,  # Dummy vector
-        )
-
-        schema = pymilvus.CollectionSchema(
-            fields=[id, checksums, dummy_embedding],
-            description=f"An checksums collection of react icons for {self.checksum_collection_name}",
-        )
-
-        collection = pymilvus.Collection(
-            self.checksum_collection_name,
-            schema=schema,
-            using=self.milvus_cleint_alias,
-        )
-        index_params = {
-            "metric_type": "L2",
-            "index_type": "FLAT",
-        }
-        collection.create_index(
-            field_name=dummy_embedding.name,
-            index_params=index_params,
-        )
+        collection = None
+        counter = 0
+        counter_limit = 10
+        while (collection is None) and (counter < counter_limit):
+            self.qdrant_client.recreate_collection(
+                collection_name=self.checksum_collection_name,
+                vectors_config=models.VectorParams(
+                    size=self.checksum_vector_dummy_length,
+                    distance=models.Distance.DOT,
+                ),
+                on_disk_payload=True,
+            )
+            collection = self.collection_exists(self.checksum_collection_name)
+            counter += 1
+        if collection is None:
+            raise RuntimeError("Collection not created")
         return collection
 
     def create_new_embedding_collection(
         self,
         embedder: core.Embedder,
-        indexing_metric: "MILVUS_INDEX_METHOD" = "L2",
-    ) -> pymilvus.Collection:
+        indexing_metric: models.Distance,
+    ) -> qcT.CollectionInfo:
         """
         Only creates collection.
         Before doing query, you need to load it using `load_collection()` methods
@@ -140,59 +78,24 @@ class ApplicationRepository:
             embedder_name=embedder.name(),
             index=indexing_metric,
         )
-        id = pymilvus.FieldSchema(
-            name="id",
-            dtype=pymilvus.DataType.VARCHAR,
-            is_primary=True,
-            max_length=256,
-        )
-        parent_name = pymilvus.FieldSchema(
-            name="parent_name",
-            dtype=pymilvus.DataType.VARCHAR,
-            max_length=5,
-        )
-        icon_name = pymilvus.FieldSchema(
-            name="icon_name",
-            dtype=pymilvus.DataType.VARCHAR,
-            max_length=256,
-        )
-        embedding = pymilvus.FieldSchema(
-            name="embedding",
-            dtype=pymilvus.DataType.FLOAT_VECTOR,
-            dim=embedder.num_dimensions(),
-        )
-        schema = pymilvus.CollectionSchema(
-            fields=[id, parent_name, icon_name, embedding],
-            description=collection_info.to_json(),
-        )
-        collection = pymilvus.Collection(
-            collection_info.full_name,
-            schema=schema,
-            using=self.milvus_cleint_alias,
-        )
-        index_params = {
-            "metric_type": indexing_metric,
-            "index_type": "FLAT",
-        }
-        collection.create_index(
-            field_name=embedding.name,
-            index_params=index_params,
-        )
+        collection = None
+        counter = 0
+        counter_limit = 10
+        while (collection is None) and (counter < counter_limit):
+            self.qdrant_client.recreate_collection(
+                collection_name=collection_info.full_name,
+                vectors_config=models.VectorParams(
+                    size=embedder.num_dimensions(),
+                    distance=indexing_metric,
+                ),
+                on_disk_payload=True,
+            )
+            collection = self.collection_exists(collection_info.full_name)
+            counter += 1
+
+        if collection is None:
+            raise RuntimeError("Collection not created")
         return collection
-
-    def collection_is_loaded(self, collection: pymilvus.Collection):
-        collection = pymilvus.Collection(
-            collection.name, using=self.milvus_cleint_alias
-        )
-        load_state: LoadState = pymilvus.utility.load_state(collection.name)
-        return load_state == LoadState.Loaded
-
-    def load_collection(self, collection: pymilvus.Collection):
-        collection = pymilvus.Collection(
-            collection.name, using=self.milvus_cleint_alias
-        )
-        collection.load()
-        pymilvus.utility.wait_for_loading_complete(collection.name)
 
     def get_icon_entity_id(self, icon: core.IconData) -> "str":
         return f"{icon.parent_name}_{icon.icon_name}"
@@ -208,78 +111,103 @@ class ApplicationRepository:
     def get_checksum_collection_name(self) -> "str":
         return self.checksum_collection_name
 
-    def get_checksum_parent_icon(self, parent_id: "str") -> "str | None":
-        search_query = f"id in ['{parent_id}']"
-        log.debug(f"Repository: search query {search_query}")
+    def get_checksum_parent_icon(self, parent_id: "str") -> str | None:
+        res = self.qdrant_client.scroll(
+            collection_name=self.checksum_collection_name,
+            scroll_filter=models.Filter(
+                must=[
+                    models.FieldCondition(
+                        key="parent_id", match=models.MatchValue(value=parent_id)
+                    )
+                ]
+            ),
+        )[0]
 
-        # Search for entities
-        res = self.checksum_collection.query(
-            expr=search_query,
-            output_fields=[
-                "checksums",
-            ],
-        )
-
-        log.debug(
-            f"Repository: Get Checksum query: {search_query} | Get Checksum resulst: {res}"
-        )
-
-        if len(res) == 0:
+        if (len(res) == 0) or (res[0].payload is None):
             return None
 
-        return res[0]["checksums"]
+        checksum = res[0].payload.get("checksums", None)
+        if checksum is None:
+            return None
 
-    def add_or_update_icon_checksum(self, parent_id: "str", checksum: "str"):
-        search_query = f"id in ['{parent_id}']"
-        log.debug(f"Repository: search query {search_query}")
-        # Search for entities
-        res = self.checksum_collection.query(
-            expr=search_query,
-            output_fields=[
-                "id",
-            ],
-        )
-        log.debug(
-            f"Repository: Get Checksum query: {search_query} | Get Checksum resulst: {res}"
-        )
+        return checksum
+
+    def add_or_update_icon_checksum(self, parent_id: "str", checksums: "str"):
+        res = self.qdrant_client.scroll(
+            collection_name=self.checksum_collection_name,
+            scroll_filter=models.Filter(
+                must=[
+                    models.FieldCondition(
+                        key="parent_id", match=models.MatchValue(value=parent_id)
+                    )
+                ]
+            ),
+        )[0]
+
+        # Generate new id by default, use available id if available
+        point_id = str(uuid.uuid4())
         if len(res) != 0:
-            # Delete available data
-            self.checksum_collection.delete(search_query)
+            point_id = res[0].id
 
-        # Add Entity
-        entities = [[parent_id], [checksum], [[0 for _ in range(32)]]]  # Dummy vector
-        self.checksum_collection.insert(entities)
-        self.checksum_collection.flush()
+        self.qdrant_client.upsert(
+            wait=True,
+            collection_name=self.checksum_collection_name,
+            points=models.Batch(
+                ids=[point_id],
+                vectors=[[0 for _ in range(self.checksum_vector_dummy_length)]],
+                payloads=[{"parent_id": parent_id, "checksums": checksums}],
+            ),
+        )
 
-    # TODO: Refactor this code so that we can do batched embeded_icon inputs
+        return checksums
+
     def add_or_update_icon(
         self,
+        embedder: core.Embedder,
+        indexing_metric: models.Distance,
         embeded_icon: typing.List[core.IconEmbeddings],
     ):
-        ids = [self.get_icon_entity_id(icon.icon_data) for icon in embeded_icon]
-        search_query = "id in [" + ",".join([f"'{id}'" for id in ids]) + "]"
-        log.debug(f"Repository: search query {search_query}")
-
-        # Search for entities
-        res = self.embedding_collection.query(
-            expr=search_query,
-            output_fields=[
-                "id",
-            ],
+        collection_info = core.CollectionInformation(
+            embedder_name=embedder.name(),
+            index=indexing_metric,
         )
-        if len(res) != 0:
-            # Delete available data
-            self.embedding_collection.delete(search_query)
 
-        # Add Entity
-        parent_names = [icon.icon_data.parent_name for icon in embeded_icon]
-        icon_name = [icon.icon_data.icon_name for icon in embeded_icon]
-        embeddings = [icon.embeddings for icon in embeded_icon]
-        entities = [
-            ids,
-            parent_names,
-            icon_name,
-            embeddings,
-        ]
-        self.embedding_collection.insert(entities)
-        self.embedding_collection.flush()
+        res = self.qdrant_client.scroll(
+            collection_name=collection_info.full_name,
+            scroll_filter=models.Filter(
+                should=[
+                    models.FieldCondition(
+                        key="icon_id",
+                        match=models.MatchValue(value=icon.icon_data.icon_name),
+                    )
+                    for icon in embeded_icon
+                ]
+            ),
+        )[0]
+
+        # Delete all ids if available
+        if len(res) != 0:
+            self.qdrant_client.delete(
+                collection_name=collection_info.full_name,
+                points_selector=models.PointIdsList(
+                    points=[x.id for x in res],
+                ),
+                wait=True,
+            )
+
+        point_ids = [str(uuid.uuid4()) for _ in range(len(embeded_icon))]
+        self.qdrant_client.upsert(
+            wait=True,
+            collection_name=collection_info.full_name,
+            points=models.Batch(
+                ids=[*point_ids],
+                vectors=[x.embeddings for x in embeded_icon],
+                payloads=[
+                    {
+                        "parent_id": x.icon_data.parent_name,
+                        "icon_name": x.icon_data.icon_name,
+                    }
+                    for x in embeded_icon
+                ],
+            ),
+        )
