@@ -15,4 +15,4 @@ Create a react-icons alternative website to be able search an icon by drawing on
   - [x] Create Github Action with Cron that run a python program to update database
   - [x] Smart update (don't update available icon, only update icon that isn't in the database)
 - [x] Create website to draw, and send it to Vercel for draw embedding and checked into database
-- [ ] Change Database to self hosted using https://qdrant.tech/
+- [x] Change Database to self hosted using https://qdrant.tech/

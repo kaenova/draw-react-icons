@@ -8,7 +8,7 @@ from dataclasses import dataclass
 @dataclass
 class IconEmbeddings:
     icon_data: IconData
-    embeddings: list
+    embeddings: list[float]
 
 
 class CollectionInformation:

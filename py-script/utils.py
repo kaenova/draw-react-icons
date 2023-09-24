@@ -4,19 +4,27 @@ import typing
 import threading
 import queue
 import argparse
+import json
 
 from checksumdir import dirhash
 
 
-def parse_arg_embed_generator(default_zip_path, embedder_dict, milvus_index_opts):
+def parse_arg_embed_generator(
+    default_zip_path, default_json_path, embedder_dict, indexing_methods
+):
     arg_parser = argparse.ArgumentParser(
         "Embedding Updater",
-        "This program is a runner to run an embedding inference for an react-icons image that are bundled in a zip file. The image of the emdeds need to have a background of black and the foreground of white. You can invert the image using --invert argument",
+        "This program is a runner to run an embedding inference for an react-icons image that are bundled in a zip file and only run for inputted josn file. The image of the emdeds need to have a background of black and the foreground of white. You can invert the image using --invert argument",
     )
     arg_parser.add_argument(
-        "-i",
+        "--input-zip",
         default=default_zip_path,
         help="Path of input zip file",
+    )
+    arg_parser.add_argument(
+        "--input-json",
+        default=default_json_path,
+        help="Path of input json file",
     )
     arg_parser.add_argument(
         "--embedder",
@@ -37,31 +45,83 @@ def parse_arg_embed_generator(default_zip_path, embedder_dict, milvus_index_opts
         default=True,
     )
     arg_parser.add_argument(
-        "--milvus-indexing",
-        choices=milvus_index_opts,
-        default=milvus_index_opts[0],
-        help="Indexing method on milvus if collection is not created",
-    )
-    arg_parser.add_argument(
-        "--milvus-endpoint",
-        help="Milvus zilliz endpoint URI",
-        default=os.environ["MILVUS_ENDPOINT"],
-    )
-    arg_parser.add_argument(
-        "--milvus-api-key",
-        help="Milvus zilliz API Key",
-        default=os.environ["MILVUS_API_KEY"],
-    )
-    arg_parser.add_argument(
-        "--milvus-db",
-        help="Milvus Database",
-        default=os.environ["MILVUS_DB"],
-    )
-    arg_parser.add_argument(
         "--milvus-upload-batch",
         help="Milvus number of batch to be uploaded, for rough estimation there are 44000 icons",
         type=int,
         default=2000,
+    )
+    arg_parser.add_argument(
+        "--qdrant-endpoint",
+        help="Qdrant Cloud endpoint URI",
+        default=os.environ["QDRANT_ENDPOINT"],
+    )
+    arg_parser.add_argument(
+        "--qdrant-api-key",
+        help="Qdrant Cloud API Key",
+        default=os.environ["QDRANT_API_KEY"],
+    )
+    arg_parser.add_argument(
+        "--upload-batch",
+        help="Number of batch to be uploaded, for rough estimation there are 44000 icons",
+        type=int,
+        default=2000,
+    )
+    arg_parser.add_argument(
+        "--indexing",
+        choices=indexing_methods,
+        help="Indexing method on milvus if collection is not created",
+        required=True,
+    )
+    return arg_parser.parse_args()
+
+
+def parse_arg_icon_selector(default_zip_path, default_json_path):
+    arg_parser = argparse.ArgumentParser(
+        "Icon Selector",
+        "This program is a runner to check checksum on database from inputted zip and output a json of the mismatch checksum",
+    )
+    arg_parser.add_argument(
+        "--qdrant-endpoint",
+        help="Qdrant Cloud endpoint URI",
+        default=os.environ["QDRANT_ENDPOINT"],
+    )
+    arg_parser.add_argument(
+        "--qdrant-api-key",
+        help="Qdrant Cloud API Key",
+        default=os.environ["QDRANT_API_KEY"],
+    )
+    arg_parser.add_argument(
+        "-i",
+        default=default_zip_path,
+        help="Path of input zip file",
+    )
+    arg_parser.add_argument(
+        "-o",
+        default=default_json_path,
+        help="Path of output json file",
+    )
+    return arg_parser.parse_args()
+
+
+def parse_arg_update_checksum(default_json_path):
+    arg_parser = argparse.ArgumentParser(
+        "Update Checksum",
+        "This program is a runner to update checksum on database from inputted json of mismatch checksum",
+    )
+    arg_parser.add_argument(
+        "--qdrant-endpoint",
+        help="Qdrant Cloud endpoint URI",
+        default=os.environ["QDRANT_ENDPOINT"],
+    )
+    arg_parser.add_argument(
+        "--qdrant-api-key",
+        help="Qdrant Cloud API Key",
+        default=os.environ["QDRANT_API_KEY"],
+    )
+    arg_parser.add_argument(
+        "-i",
+        default=default_json_path,
+        help="Path of input json file",
     )
     return arg_parser.parse_args()
 
@@ -166,3 +226,16 @@ def batch(iterable: typing.List, n=1):
     l = len(iterable)
     for ndx in range(0, l, n):
         yield iterable[ndx : min(ndx + n, l)]
+
+
+def generate_json_checksum(data: typing.Dict[str, str], path: str):
+    str_json_data = json.dumps(data)
+    with open(path, "w") as outfile:
+        outfile.write(str_json_data)
+
+
+def read_json_checksum(path: str) -> typing.Dict[str, str]:
+    f = open(path)
+    data = json.load(f)
+    f.close()
+    return data

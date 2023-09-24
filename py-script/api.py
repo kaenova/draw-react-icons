@@ -7,7 +7,6 @@ import re
 import jwt
 import core
 import base64
-import pymilvus
 import typing
 import constants
 import requests
@@ -18,6 +17,8 @@ import numpy as np
 from PIL import Image
 from io import BytesIO
 from pydantic import BaseModel
+from qdrant_client import QdrantClient
+from qdrant_client.http import models
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -33,56 +34,38 @@ class CollectionInfo(BaseModel):
 
 
 class Icon(BaseModel):
-    iconID: str
-    parentID: str
     iconName: str
+    parentID: str
 
 
 class ImageEstimator:
-    milvus_client_alias = "default"
     max_query_limit = 50
 
     def __init__(
         self,
         jwt_secret: str,
         hcaptcha_secret: str,
-        milvus_uri: str,
-        milvus_api_key: str,
-        milvus_db: str,
+        qdrant_uri: str,
+        qdrant_api_key: str,
     ) -> None:
         super().__init__()
-        pymilvus.connections.connect(
-            alias=self.milvus_client_alias,
-            uri=milvus_uri,
-            token=milvus_api_key,
-            db_name=milvus_db,
+        self.qdrant_client = QdrantClient(
+            url=qdrant_uri, api_key=qdrant_api_key, prefer_grpc=True
         )
+
         self.hcaptcha_secret = hcaptcha_secret
         self.jwt_secret = jwt_secret
 
-        # Prepare Collection
-        collections = pymilvus.utility.list_collections(using=self.milvus_client_alias)
-        self.collections_info: typing.List[core.CollectionInformation] = []
-        for collection in collections:
-            collection_data = pymilvus.Collection(
-                name=collection, using=self.milvus_client_alias
-            )
-            try:
-                self.collections_info.append(
-                    core.CollectionInformation.from_json(
-                        collection_data.description,
-                    )
-                )
-            except:
-                continue
-
-    def get_collection_info_by_name(
-        self, name: str
-    ) -> core.CollectionInformation | None:
-        for collection in self.collections_info:
-            if collection.full_name == name:
-                return collection
-        return None
+    @staticmethod
+    def _checkValidCollectionName(name: str) -> typing.Tuple[str, str] | None:
+        pattern = r"^([^\_]+)_([^\_]+)$"
+        match = re.match(pattern, name)
+        if match:
+            embedder_name = match.group(1)
+            indexing_name = match.group(2)
+            return embedder_name, indexing_name
+        else:
+            return None
 
     def QueryImage(
         self,
@@ -101,20 +84,19 @@ class ImageEstimator:
         if limit > self.max_query_limit:
             limit = self.max_query_limit
         collection_name = collectionName
-        collection_info = self.get_collection_info_by_name(collection_name)
+        collection_info = self._checkValidCollectionName(collection_name)
         if collection_info is None:
             raise HTTPException(400)
-        embedder_name = collection_info.embedder
+        embedder_name = collection_info[0]
         if embedder_name not in constants.EMBEDDER_DICT:
             raise HTTPException(500)
-
-        # Prepare dependency
-        embedder = constants.EMBEDDER_DICT[embedder_name]
-        collection = pymilvus.Collection(
-            name=collection_info.full_name, using=self.milvus_client_alias
-        )
+        collections = self.GetCollectionInfo()
+        collections_name = [x.collectionName for x in collections]
+        if collection_name not in collections_name:
+            raise HTTPException(400)
 
         # Get Image Embeddings
+        embedder = constants.EMBEDDER_DICT[embedder_name]
         image_data = re.sub("^data:image/.+;base64,", "", base64Image)
         img = Image.open(BytesIO(base64.b64decode(image_data)))
         img = img.convert("L")
@@ -126,48 +108,43 @@ class ImageEstimator:
         embeddings = embedder.embeds(img_arr)
 
         # Query to Database
-        search_params = {
-            "metric_type": collection_info.index,
-            "offset": 0,
-            "ignore_growing": False,
-            "params": {},
-        }
-        results = collection.search(
-            data=[embeddings],
-            anns_field="embedding",
-            param=search_params,
-            output_fields=["id", "parent_name", "icon_name"],
+        res = self.qdrant_client.search(
+            collection_name=collection_name,
+            search_params=models.SearchParams(exact=False),
+            query_vector=embeddings,
             limit=limit,
-            consistency_level="Strong",
         )
-        if not isinstance(results, pymilvus.SearchResult):
-            raise HTTPException(500)
 
-        # Re assign results
-        results = results
-        results_deep = results[0]
-        if not isinstance(results_deep, pymilvus.Hits):
-            raise HTTPException(500)
-
-        icons = [
-            Icon(
-                iconID=res.entity.get("id"),
-                parentID=res.entity.get("parent_name"),
-                iconName=res.entity.get("icon_name"),
+        queried_icons: typing.List[Icon] = []
+        for point in res:
+            if point.payload is None:
+                continue
+            icon_name = point.payload.get("icon_name")
+            parent_id = point.payload.get("parent_id")
+            if icon_name is None or parent_id is None:
+                continue
+            queried_icons.append(
+                Icon(
+                    iconName=icon_name,
+                    parentID=parent_id,
+                )
             )
-            for res in results_deep
-        ]
-        return icons
+        return queried_icons
 
     def GetCollectionInfo(self):
-        return [
-            CollectionInfo(
-                embedder=collection.embedder,
-                index=collection.index,
-                collectionName=collection.full_name,
-            )
-            for collection in self.collections_info
-        ]
+        collections = self.qdrant_client.get_collections().collections
+        valid_collection: typing.List[CollectionInfo] = []
+        for collection in collections:
+            collection_info = ImageEstimator._checkValidCollectionName(collection.name)
+            if collection_info is not None:
+                valid_collection.append(
+                    CollectionInfo(
+                        embedder=collection_info[0],
+                        index=collection_info[1],
+                        collectionName=collection.name,
+                    )
+                )
+        return valid_collection
 
     def CreateToken(self, responseToken: str) -> str:
         if not self._validateHcaptcha(responseToken):
@@ -218,9 +195,8 @@ if os.environ["HCAPTCHA_SECRET"].strip() == "":
 exec = ImageEstimator(
     os.environ["JWT_SECRET"] or "",
     os.environ["HCAPTCHA_SECRET"] or "",
-    os.environ["MILVUS_ENDPOINT"] or "",
-    os.environ["MILVUS_API_KEY"] or "",
-    os.environ["MILVUS_DB"] or "",
+    os.environ["QDRANT_ENDPOINT"] or "",
+    os.environ["QDRANT_API_KEY"] or "",
 )
 
 app.add_middleware(
@@ -230,6 +206,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 @app.get("/", tags=["health"])
 def read_root():
