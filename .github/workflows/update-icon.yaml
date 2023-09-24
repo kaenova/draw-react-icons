@@ -60,7 +60,7 @@ jobs:
 
       - name: Generate Checksum
         run: |
-          python py-script/embed-gen.py --indexing dot
+          python py-script/icon-selector.py
 
       - name: Upload artifact - react-icons-image
         uses: actions/upload-artifact@v3
