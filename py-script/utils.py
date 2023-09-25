@@ -64,7 +64,7 @@ def parse_arg_embed_generator(
         "--upload-batch",
         help="Number of batch to be uploaded, for rough estimation there are 44000 icons",
         type=int,
-        default=2000,
+        default=1000,
     )
     arg_parser.add_argument(
         "--indexing",
@@ -75,9 +75,9 @@ def parse_arg_embed_generator(
     return arg_parser.parse_args()
 
 
-def parse_arg_icon_selector(default_zip_path, default_json_path):
+def parse_arg_checksum_gen(default_zip_path, default_json_path):
     arg_parser = argparse.ArgumentParser(
-        "Icon Selector",
+        "Checksum JSON",
         "This program is a runner to check checksum on database from inputted zip and output a json of the mismatch checksum",
     )
     arg_parser.add_argument(
@@ -99,29 +99,6 @@ def parse_arg_icon_selector(default_zip_path, default_json_path):
         "-o",
         default=default_json_path,
         help="Path of output json file",
-    )
-    return arg_parser.parse_args()
-
-
-def parse_arg_update_checksum(default_json_path):
-    arg_parser = argparse.ArgumentParser(
-        "Update Checksum",
-        "This program is a runner to update checksum on database from inputted json of mismatch checksum",
-    )
-    arg_parser.add_argument(
-        "--qdrant-endpoint",
-        help="Qdrant Cloud endpoint URI",
-        default=os.environ["QDRANT_ENDPOINT"],
-    )
-    arg_parser.add_argument(
-        "--qdrant-api-key",
-        help="Qdrant Cloud API Key",
-        default=os.environ["QDRANT_API_KEY"],
-    )
-    arg_parser.add_argument(
-        "-i",
-        default=default_json_path,
-        help="Path of input json file",
     )
     return arg_parser.parse_args()
 

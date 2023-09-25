@@ -28,9 +28,7 @@ class ApplicationRepository:
     ) -> None:
         # Connect milvus
         self.qdrant_client = QdrantClient(
-            url=qdrant_uri,
-            api_key=qdrant_api_key,
-            prefer_grpc=True
+            url=qdrant_uri, api_key=qdrant_api_key, prefer_grpc=True
         )
 
     def collection_exists(self, collection_name: str) -> qcT.CollectionInfo | None:
@@ -111,13 +109,19 @@ class ApplicationRepository:
     def get_checksum_collection_name(self) -> "str":
         return self.checksum_collection_name
 
-    def get_checksum_parent_icon(self, parent_id: "str") -> str | None:
+    def get_checksum(
+        self, embedder: core.Embedder, indexing: str
+    ) -> typing.Dict[str, str] | None:
+        collection_info = core.CollectionInformation(
+            embedder_name=embedder.name(), index=indexing
+        )
         res = self.qdrant_client.scroll(
             collection_name=self.checksum_collection_name,
             scroll_filter=models.Filter(
                 must=[
                     models.FieldCondition(
-                        key="parent_id", match=models.MatchValue(value=parent_id)
+                        key="collection_name",
+                        match=models.MatchValue(value=collection_info.full_name),
                     )
                 ]
             ),
@@ -132,13 +136,20 @@ class ApplicationRepository:
 
         return checksum
 
-    def add_or_update_icon_checksum(self, parent_id: "str", checksums: "str"):
+    def add_or_update_checksum(
+        self, embedder: core.Embedder, indexing: str, checksums: typing.Dict[str, str]
+    ):
+        collection_info = core.CollectionInformation(
+            embedder_name=embedder.name(), index=indexing
+        )
+        collection_name = collection_info.full_name
         res = self.qdrant_client.scroll(
             collection_name=self.checksum_collection_name,
             scroll_filter=models.Filter(
                 must=[
                     models.FieldCondition(
-                        key="parent_id", match=models.MatchValue(value=parent_id)
+                        key="collection_name",
+                        match=models.MatchValue(value=collection_name),
                     )
                 ]
             ),
@@ -155,7 +166,7 @@ class ApplicationRepository:
             points=models.Batch(
                 ids=[point_id],
                 vectors=[[0 for _ in range(self.checksum_vector_dummy_length)]],
-                payloads=[{"parent_id": parent_id, "checksums": checksums}],
+                payloads=[{"collection_name": collection_name, "checksums": checksums}],
             ),
         )
 

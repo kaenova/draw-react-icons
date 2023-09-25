@@ -32,7 +32,7 @@ if "__main__" == __name__:
 
     # Initialize embedder
     log.info("Initializing Embedder")
-    embedder = EMBEDDER_DICT[arg.embedder]
+    embedder = EMBEDDER_DICT[arg.embedder]()
     log.info("Embedder Initialized")
 
     # Initialize Repository
@@ -81,13 +81,30 @@ if "__main__" == __name__:
     log.info("Load checksum json data 📦")
     t = timeit.default_timer()
     checksums_data = utils.read_json_checksum(arg.input_json)
-    mismatch_checksum_parent_id = list(checksums_data.keys())
     t_end = timeit.default_timer()
     log.debug(f"Checksum loader {t_end - t}")
     log.info("JSON Checksum loaded")
 
+    # Load Checksum Database
+    log.info("Load checksum database 📦")
+    checksums_data_db = repository.get_checksum(embedder, arg.indexing)
+    log.info("Database Checksum loaded 📦")
+
+    # Check mismatch checksum
+    log.info("Checking mismatch checksum")
+    mismatch_checksum_parent_id = []
+    if checksums_data_db is None:
+        mismatch_checksum_parent_id = list(checksums_data.keys())
+    else:
+        for parent_id in checksums_data:
+            if (parent_id not in checksums_data_db) or (
+                checksums_data[parent_id] != checksums_data_db[parent_id]
+            ):
+                mismatch_checksum_parent_id.append(parent_id)
+    log.info(f"Mismatch checksum parent: {mismatch_checksum_parent_id}")
+
     # Prepare icon data to be uploaded
-    log.info(f"Loading Data of a  mismatch checksum: {mismatch_checksum_parent_id}")
+    log.info(f"Loading Data of a  mismatch checksum")
     t = timeit.default_timer()
     embed_parent_icon_data: "typing.List[core.ParentIconData]" = []
     for parent_id in mismatch_checksum_parent_id:
@@ -119,6 +136,14 @@ if "__main__" == __name__:
                 icon_embed_batch,
             )
         log.info(f"{embed_parent_data.parent_id} Updated")
+    t_end = timeit.default_timer()
+    log.debug(f"Embedding save {t_end - t}")
+    log.info("Unmatch Embedding saved")
+
+    # Save checksum
+    log.info("Saving checksum to database")
+    t = timeit.default_timer()
+    repository.add_or_update_checksum(embedder, arg.indexing, checksums_data)
     t_end = timeit.default_timer()
     log.debug(f"Embedding save {t_end - t}")
     log.info("Unmatch Embedding saved")

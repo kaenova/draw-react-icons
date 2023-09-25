@@ -9,36 +9,31 @@ from constants import *
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 
-arg = utils.parse_arg_update_checksum(
-    DEFAULT_JSON_PATH,
+arg = utils.parse_arg_api(
+    EMBEDDER_DICT,
 )
 
 qdrant_client = QdrantClient(
     url=arg.qdrant_endpoint,
     api_key=arg.qdrant_api_key,
+    prefer_grpc=True,
 )
 
 collections = qdrant_client.get_collections().collections
-print([collection.name for collection in collections])
 
-# qdrant_client.upsert(
-#     collection_name="test",
-#     points=models.Batch(
-#         ids=[
-#             1,
-#         ],
-#         payloads=[
-#             {"color": "red"},
-#         ],
-#         vectors=[
-#             [0 for _ in range(300)],
-#         ],
-#     ),
-# )
+qdrant_client.upsert(
+    collection_name="test",
+    points=models.Batch(
+        ids=[2],
+        payloads=[
+            {"color": "red", "mantap": {"jasdasd": "asdlasdkl"}},
+        ],
+        vectors=[
+            [0 for _ in range(300)],
+        ],
+    ),
+)
 
-# res = qdrant_client.scroll(
-#     collection_name="test",
-# )
-
-
-# print(res)
+res = qdrant_client.scroll(
+    collection_name="test",
+)

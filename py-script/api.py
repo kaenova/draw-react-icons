@@ -96,7 +96,7 @@ class ImageEstimator:
             raise HTTPException(400)
 
         # Get Image Embeddings
-        embedder = constants.EMBEDDER_DICT[embedder_name]
+        embedder = constants.EMBEDDER_DICT[embedder_name]()
         image_data = re.sub("^data:image/.+;base64,", "", base64Image)
         img = Image.open(BytesIO(base64.b64decode(image_data)))
         img = img.convert("L")

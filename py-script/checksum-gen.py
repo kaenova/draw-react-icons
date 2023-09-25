@@ -4,14 +4,13 @@ load_dotenv()
 
 import utils
 import timeit
-import typing
 import repository
 
 from core import log
 from constants import *
 
 if "__main__" == __name__:
-    arg = utils.parse_arg_icon_selector(
+    arg = utils.parse_arg_checksum_gen(
         DEFAULT_ZIP_PATH,
         DEFAULT_JSON_PATH,
     )
@@ -52,16 +51,5 @@ if "__main__" == __name__:
     log.debug(f"Checksum {t_end - t}")
     log.info(f"Folder checksum stats: {hash_stats}")
 
-    # check mismatch checksum folder
-    log.info("Checking mismatch checksum")
-    mismatch_checksum_parent_id: "typing.Dict[str, str]" = {}
-    for parent_id in hash_stats:
-        checksum = repository.get_checksum_parent_icon(
-            parent_id,
-        )
-        if checksum is None or checksum != hash_stats[parent_id]:
-            mismatch_checksum_parent_id[parent_id] = hash_stats[parent_id]
-    log.info("Mismatch checksum generated")
-
-    utils.generate_json_checksum(mismatch_checksum_parent_id, arg.o)
+    utils.generate_json_checksum(hash_stats, arg.o)
     log.info(f"script finished, and output a json on {arg.o}")
