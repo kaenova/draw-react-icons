@@ -60,13 +60,13 @@ jobs:
 
       - name: Generate Checksum
         run: |
-          python py-script/icon-selector.py
+          python py-script/checksum-gen.py
 
       - name: Upload artifact - react-icons-image
         uses: actions/upload-artifact@v3
         with:
           name: react-icons-image-checksum
-          path: py-script/checksum-gen.json
+          path: py-script/checksum.json
 
   update-database-embedding-pixel-dot:
     needs: ["generate-image", "generate-checksum"]
