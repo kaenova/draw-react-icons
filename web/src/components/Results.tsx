@@ -85,16 +85,21 @@ export default function Results({
   async function fetchIcon() {
     setIcons('loading');
     try {
-      const res = await api.post<Icon[]>('/collections/query', undefined, {
-        params: {
-          token: auth?.token,
+      const res = await api.post<Icon[]>(
+        '/collections/query',
+        {
           collectionName: collectionName,
           base64Image: base64Image,
           normalizeImage: true,
           invertImage: true,
           limit: 20,
         },
-      });
+        {
+          params: {
+            token: auth?.token,
+          },
+        },
+      );
       setIcons(res.data);
     } catch (e) {
       toast.error('Failed to fetch related icon');

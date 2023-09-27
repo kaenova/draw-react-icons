@@ -23,8 +23,13 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 origins = [
-    "https://draw-react-icons.kaenova.my.id",
+    "http://localhost:3000",
 ]
+
+if os.environ.get("ENV") is not None and os.environ.get("ENV") == "production":
+    origins = [
+        "https://draw-react-icons.kaenova.my.id",
+    ]
 
 
 class CollectionInfo(BaseModel):
@@ -52,7 +57,9 @@ class ImageEstimator:
         self.qdrant_client = QdrantClient(
             url=qdrant_uri, api_key=qdrant_api_key, prefer_grpc=True
         )
-
+        self.embedders = {}
+        for embedder_name in constants.EMBEDDER_DICT:
+            self.embedders[embedder_name] = constants.EMBEDDER_DICT[embedder_name]()
         self.hcaptcha_secret = hcaptcha_secret
         self.jwt_secret = jwt_secret
 
@@ -96,7 +103,7 @@ class ImageEstimator:
             raise HTTPException(400)
 
         # Get Image Embeddings
-        embedder = constants.EMBEDDER_DICT[embedder_name]()
+        embedder = self.embedders[embedder_name]
         image_data = re.sub("^data:image/.+;base64,", "", base64Image)
         img = Image.open(BytesIO(base64.b64decode(image_data)))
         img = img.convert("L")
@@ -105,6 +112,7 @@ class ImageEstimator:
             img_arr = img_arr / 255
         if invertImage:
             img_arr = (img_arr - 1) * -1
+        img_arr = np.expand_dims(img_arr, -1).astype(np.float32)
         embeddings = embedder.embeds(img_arr)
 
         # Query to Database
@@ -228,15 +236,21 @@ def get_collections() -> list[CollectionInfo]:
     return exec.GetCollectionInfo()
 
 
+class CollectionQuery(BaseModel):
+    collectionName: str
+    base64Image: str
+    normalizeImage: bool = True
+    invertImage: bool = False
+    limit: int = 20
+
+
 @app.post("/collections/query", tags=["collections"])
-def query_collections(
-    token: str,
-    collectionName: str,
-    base64Image: str,
-    normalizeImage: bool = True,
-    invertImage: bool = False,
-    limit: int = 20,
-) -> list[Icon]:
+def query_collections(token: str, collectionQuery: CollectionQuery) -> list[Icon]:
     return exec.QueryImage(
-        token, collectionName, base64Image, normalizeImage, invertImage, limit
+        token,
+        collectionQuery.collectionName,
+        collectionQuery.base64Image,
+        collectionQuery.normalizeImage,
+        collectionQuery.invertImage,
+        collectionQuery.limit,
     )
