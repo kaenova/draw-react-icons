@@ -175,3 +175,111 @@ jobs:
       - name: Update Embedding Database
         run: |
           python py-script/embed-gen.py --indexing euclid
+
+  update-database-embedding-cnnfigr8-euclid:
+    needs: ["generate-image", "generate-checksum"]
+    runs-on: ubuntu-20.04
+    name: Update Icon Embedding to Database using CNNFigr8Embedder on Euclidean Distance Indexing
+    env:
+      QDRANT_ENDPOINT: ${{ secrets.QDRANT_ENDPOINT }}
+      QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download artifact - react-icons-image
+        uses: actions/download-artifact@v3
+        with:
+          name: react-icons-image
+          path: py-script/
+
+      - name: Download artifact - react-icons-image-checksum
+        uses: actions/download-artifact@v3
+        with:
+          name: react-icons-image-checksum
+          path: py-script/
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Library
+        run: |
+          make python-lib
+
+      - name: Update Embedding Database
+        run: |
+          python py-script/embed-gen.py --indexing euclid --embedder CNNFigr8Embedder
+
+  update-database-embedding-cnnfigr8-cosine:
+    needs: ["generate-image", "generate-checksum"]
+    runs-on: ubuntu-20.04
+    name: Update Icon Embedding to Database using CNNFigr8Embedder on Cosine Distance Indexing
+    env:
+      QDRANT_ENDPOINT: ${{ secrets.QDRANT_ENDPOINT }}
+      QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download artifact - react-icons-image
+        uses: actions/download-artifact@v3
+        with:
+          name: react-icons-image
+          path: py-script/
+
+      - name: Download artifact - react-icons-image-checksum
+        uses: actions/download-artifact@v3
+        with:
+          name: react-icons-image-checksum
+          path: py-script/
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Library
+        run: |
+          make python-lib
+
+      - name: Update Embedding Database
+        run: |
+          python py-script/embed-gen.py --indexing cosine --embedder CNNFigr8Embedder
+
+  update-database-embedding-cnnfigr8-dot:
+    needs: ["generate-image", "generate-checksum"]
+    runs-on: ubuntu-20.04
+    name: Update Icon Embedding to Database using CNNFigr8Embedder on Dot Product Indexing
+    env:
+      QDRANT_ENDPOINT: ${{ secrets.QDRANT_ENDPOINT }}
+      QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download artifact - react-icons-image
+        uses: actions/download-artifact@v3
+        with:
+          name: react-icons-image
+          path: py-script/
+
+      - name: Download artifact - react-icons-image-checksum
+        uses: actions/download-artifact@v3
+        with:
+          name: react-icons-image-checksum
+          path: py-script/
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Library
+        run: |
+          make python-lib
+
+      - name: Update Embedding Database
+        run: |
+          python py-script/embed-gen.py --indexing dot --embedder CNNFigr8Embedder

@@ -16,7 +16,22 @@ export default function App({ Component, pageProps }: AppProps) {
           title: 'Search the Icons you Imagine - Draw React Icons',
           description:
             'Search your most wanted icons with your imagination using Draw React Icons',
-          images: [{ url: '/thumb.png' }],
+          images: [
+            {
+              url: '/thumb.png',
+              alt: 'Thumbnail Image Wide Draw React Icons',
+              height: 628,
+              width: 1200,
+              type: 'image/png',
+            },
+            {
+              url: '/thumb_square.png',
+              alt: 'Thumbnail Image Square Draw React Icons',
+              height: 619,
+              width: 619,
+              type: 'image/png',
+            },
+          ],
           siteName: 'DrawReactIcons',
         }}
         twitter={{
