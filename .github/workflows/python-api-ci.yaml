@@ -32,3 +32,6 @@ jobs:
 
       - name: Dockerhub Push
         run: docker push $DOCKER_REPOSITORY --all-tags
+
+      - name: Portainer Hook Update
+        run: curl -X POST ${{ secrets.BACKEND_UPDATE_WEBHOOK_URL }}
