@@ -1,7 +1,7 @@
-import typing
 import numpy as np
 
 from PIL import Image
+from .type import ArrayNxNx1
 
 
 class IconData:
@@ -28,9 +28,9 @@ class IconData:
         self.parent_name = parent_name
         self.icon_name = icon_name
         self.img_path = img_path
-        self.numpy = img
+        self.numpy = img.astype(np.float32)
 
-    def to_numpy(self) -> "np.ndarray":
+    def to_numpy(self) -> ArrayNxNx1:
         return self.numpy
 
     def to_pillow(self) -> "Image":  # type: ignore

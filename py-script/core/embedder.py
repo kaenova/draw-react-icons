@@ -1,12 +1,10 @@
 from abc import ABC, abstractmethod
 from .icon_data import *
-
-import numpy as np
-
+from .type import ArrayNxNx1
 
 class Embedder(ABC):
     @abstractmethod
-    def embeds(self, icon_data: np.ndarray) -> list:
+    def embeds(self, icon_data: ArrayNxNx1) -> list:
         pass
 
     @abstractmethod
