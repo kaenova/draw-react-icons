@@ -24,7 +24,7 @@ jobs:
 
       - name: Generate Image
         run: |
-          node node-script/image-generator/index.js --size 50 --color black --pad_size 50
+          node node-script/image-generator/index.js --size 96 --color black --pad_size 24
 
       - name: Upload artifact - react-icons-image
         uses: actions/upload-artifact@v3
@@ -68,7 +68,7 @@ jobs:
           name: react-icons-image-checksum
           path: py-script/checksum.json
 
-  update-database-embedding-pixel-dot:
+  embed-pixel-dot:
     needs: ["generate-image", "generate-checksum"]
     runs-on: ubuntu-20.04
     name: Update Icon Embedding to Database using PixelEmbedder on Dot Product Indexing
@@ -104,8 +104,8 @@ jobs:
         run: |
           python py-script/embed-gen.py --indexing dot
 
-  update-database-embedding-pixel-cosine:
-    needs: ["generate-image", "generate-checksum"]
+  embed-pixel-cosine:
+    needs: ["embed-pixel-dot"]
     runs-on: ubuntu-20.04
     name: Update Icon Embedding to Database using PixelEmbedder on Cosine Indexing
     env:
@@ -140,8 +140,8 @@ jobs:
         run: |
           python py-script/embed-gen.py --indexing cosine
 
-  update-database-embedding-pixel-euclid:
-    needs: ["generate-image", "generate-checksum"]
+  embed-pixel-euclid:
+    needs: ["embed-pixel-cosine"]
     runs-on: ubuntu-20.04
     name: Update Icon Embedding to Database using PixelEmbedder on Euclidean Distance Indexing
     env:
@@ -176,7 +176,7 @@ jobs:
         run: |
           python py-script/embed-gen.py --indexing euclid
 
-  update-database-embedding-cnnfigr8-euclid:
+  embed-cnnfigr8-euclid:
     needs: ["generate-image", "generate-checksum"]
     runs-on: ubuntu-20.04
     name: Update Icon Embedding to Database using CNNFigr8Embedder on Euclidean Distance Indexing
@@ -212,8 +212,8 @@ jobs:
         run: |
           python py-script/embed-gen.py --indexing euclid --embedder CNNFigr8Embedder
 
-  update-database-embedding-cnnfigr8-cosine:
-    needs: ["generate-image", "generate-checksum"]
+  embed-cnnfigr8-cosine:
+    needs: ["embed-cnnfigr8-euclid"]
     runs-on: ubuntu-20.04
     name: Update Icon Embedding to Database using CNNFigr8Embedder on Cosine Distance Indexing
     env:
@@ -248,8 +248,8 @@ jobs:
         run: |
           python py-script/embed-gen.py --indexing cosine --embedder CNNFigr8Embedder
 
-  update-database-embedding-cnnfigr8-dot:
-    needs: ["generate-image", "generate-checksum"]
+  embed-cnnfigr8-dot:
+    needs: ["embed-cnnfigr8-cosine"]
     runs-on: ubuntu-20.04
     name: Update Icon Embedding to Database using CNNFigr8Embedder on Dot Product Indexing
     env:
@@ -284,7 +284,7 @@ jobs:
         run: |
           python py-script/embed-gen.py --indexing dot --embedder CNNFigr8Embedder
 
-  update-database-embedding-cnnquickdraw-euclid:
+  embed-cnnquickdraw-euclid:
     needs: ["generate-image", "generate-checksum"]
     runs-on: ubuntu-20.04
     name: Update Icon Embedding to Database using CNNQuickDraw on Euclidean Distance Indexing
@@ -320,8 +320,8 @@ jobs:
         run: |
           python py-script/embed-gen.py --indexing euclid --embedder CNNQuickDraw
 
-  update-database-embedding-cnnquickdraw-cosine:
-    needs: ["generate-image", "generate-checksum"]
+  embed-cnnquickdraw-cosine:
+    needs: ["embed-cnnquickdraw-euclid"]
     runs-on: ubuntu-20.04
     name: Update Icon Embedding to Database using CNNQuickDraw on Cosine Distance Indexing
     env:
@@ -356,8 +356,8 @@ jobs:
         run: |
           python py-script/embed-gen.py --indexing cosine --embedder CNNQuickDraw
 
-  update-database-embedding-cnnquickdraw-dot:
-    needs: ["generate-image", "generate-checksum"]
+  embed-cnnquickdraw-dot:
+    needs: ["embed-cnnquickdraw-cosine"]
     runs-on: ubuntu-20.04
     name: Update Icon Embedding to Database using CNNQuickDraw on Dot Product Indexing
     env:
