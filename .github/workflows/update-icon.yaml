@@ -177,7 +177,7 @@ jobs:
           python py-script/embed-gen.py --indexing euclid
 
   embed-cnnfigr8-euclid:
-    needs: ["generate-image", "generate-checksum"]
+    needs: ["embed-pixel-euclid"]
     runs-on: ubuntu-20.04
     name: Update Icon Embedding to Database using CNNFigr8Embedder on Euclidean Distance Indexing
     env:
@@ -285,7 +285,7 @@ jobs:
           python py-script/embed-gen.py --indexing dot --embedder CNNFigr8Embedder
 
   embed-cnnquickdraw-euclid:
-    needs: ["generate-image", "generate-checksum"]
+    needs: ["embed-cnnfigr8-dot"]
     runs-on: ubuntu-20.04
     name: Update Icon Embedding to Database using CNNQuickDraw on Euclidean Distance Indexing
     env:
