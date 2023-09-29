@@ -85,6 +85,7 @@ class ApplicationRepository:
                 vectors_config=models.VectorParams(
                     size=embedder.num_dimensions(),
                     distance=indexing_metric,
+                    on_disk=True,
                 ),
                 on_disk_payload=True,
             )
@@ -220,5 +221,48 @@ class ApplicationRepository:
                     }
                     for x in embeded_icon
                 ],
+            ),
+        )
+
+    def disable_indexing(
+        self, embedder: core.Embedder, indexing_metric: models.Distance
+    ):
+        collection_info = core.CollectionInformation(
+            embedder_name=embedder.name(),
+            index=indexing_metric,
+        )
+        self.qdrant_client.update_collection(
+            collection_name=collection_info.full_name,
+            optimizers_config=models.OptimizersConfigDiff(
+                indexing_threshold=0,
+            ),
+        )
+
+    def collection_is_ready(
+        self, embedder: core.Embedder, indexing_metric: models.Distance
+    ):
+        collection_internal_info = core.CollectionInformation(
+            embedder_name=embedder.name(),
+            index=indexing_metric,
+        )
+        collection_info = self.qdrant_client.get_collection(
+            collection_name=collection_internal_info.full_name,
+        )
+        return collection_info.status == models.CollectionStatus.GREEN
+
+    def enable_indexing(
+        self,
+        embedder: core.Embedder,
+        indexing_metric: models.Distance,
+        indexing_threshold: int = 20_000,
+    ):
+        collection_info = core.CollectionInformation(
+            embedder_name=embedder.name(),
+            index=indexing_metric,
+        )
+        self.qdrant_client.update_collection(
+            collection_name=collection_info.full_name,
+            optimizers_config=models.OptimizersConfigDiff(
+                indexing_threshold=indexing_threshold,
             ),
         )

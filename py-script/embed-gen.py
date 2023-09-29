@@ -7,6 +7,7 @@ load_dotenv()
 
 import os
 import core
+import time
 import utils
 import timeit
 import typing
@@ -121,24 +122,47 @@ if "__main__" == __name__:
     log.debug(f"Data Loader {t_end - t}")
     log.info(f"Data Loaded")
 
+    # Disable indexing
+    log.info("Disabling indexing")
+    repository.disable_indexing(embedder, arg.indexing)
+    log.info("Indexing disabled")
+
     # Save to Embedding DB
     log.info("Saving unmatch checksum embedding to database")
     t = timeit.default_timer()
-    for embed_parent_data in embed_parent_icon_data:
-        log.info(f"Saving {embed_parent_data.parent_id}")
-        for icon_embed_batch in utils.batch(
-            embed_parent_data.icon_data_embeddings,
-            arg.upload_batch,
-        ):
-            repository.add_or_update_icon(
-                embedder,
-                arg.indexing,
-                icon_embed_batch,
-            )
-        log.info(f"{embed_parent_data.parent_id} Updated")
+    total_icon_uploaded = 0
+    all_upload_icons: typing.List[core.IconEmbeddings] = []
+    for parent_icon_data in embed_parent_icon_data:
+        for icon in parent_icon_data.icon_data_embeddings:
+            all_upload_icons.append(icon)
+    log.info(f"Total Icon: {len(all_upload_icons)}")
+    for icon_batch, i in utils.batch(all_upload_icons, arg.upload_batch):
+        repository.add_or_update_icon(
+            embedder,
+            arg.indexing,
+            icon_batch,
+        )
+        total_icon_uploaded += len(icon_batch)
+        log.info(f"Uploaded {total_icon_uploaded} / {len(all_upload_icons)} icons")
     t_end = timeit.default_timer()
     log.debug(f"Embedding save {t_end - t}")
     log.info("Unmatch Embedding saved")
+
+    # Enable indexing
+    log.info("Enable indexing")
+    repository.enable_indexing(embedder, arg.indexing)
+    log.info("Indexing enabled")
+
+    # Wait until indexing finished
+    log.info("Waiting for collection status to be ready")
+    collection_status_ready = False
+    while not collection_status_ready:
+        time.sleep(5)
+        collection_status_ready = repository.collection_is_ready(
+            embedder,
+            arg.indexing,
+        )
+    log.info("Collection ready")
 
     # Save checksum
     log.info("Saving checksum to database")

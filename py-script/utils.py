@@ -45,12 +45,6 @@ def parse_arg_embed_generator(
         default=True,
     )
     arg_parser.add_argument(
-        "--milvus-upload-batch",
-        help="Milvus number of batch to be uploaded, for rough estimation there are 44000 icons",
-        type=int,
-        default=2000,
-    )
-    arg_parser.add_argument(
         "--qdrant-endpoint",
         help="Qdrant Cloud endpoint URI",
         default=os.environ["QDRANT_ENDPOINT"],
@@ -64,7 +58,7 @@ def parse_arg_embed_generator(
         "--upload-batch",
         help="Number of batch to be uploaded, for rough estimation there are 44000 icons",
         type=int,
-        default=1000,
+        default=2_000,
     )
     arg_parser.add_argument(
         "--indexing",
@@ -113,21 +107,6 @@ def parse_arg_api(embedder_dict):
         choices=list(embedder_dict.keys()),
         default=list(embedder_dict.keys())[0],
         help="Embedder model to embed the image",
-    )
-    arg_parser.add_argument(
-        "--milvus-endpoint",
-        help="Milvus zilliz endpoint URI",
-        required=True,
-    )
-    arg_parser.add_argument(
-        "--milvus-api-key",
-        help="Milvus zilliz API Key",
-        required=True,
-    )
-    arg_parser.add_argument(
-        "--milvus-db",
-        help="Milvus Database",
-        required=True,
     )
     return arg_parser.parse_args()
 
@@ -202,7 +181,7 @@ def count_files_inside_folder(folder_path: "str") -> "int":
 def batch(iterable: typing.List, n=1):
     l = len(iterable)
     for ndx in range(0, l, n):
-        yield iterable[ndx : min(ndx + n, l)]
+        yield iterable[ndx : min(ndx + n, l)], ndx
 
 
 def generate_json_checksum(data: typing.Dict[str, str], path: str):
