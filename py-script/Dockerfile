@@ -10,4 +10,4 @@ EXPOSE 8000
 
 ENV PYTHONUNBUFFERED=1
 
-CMD ["uvicorn", "--workers", "10", "--host", "0.0.0.0", "api:app"]
+CMD ["uvicorn", "--workers", "2", "--host", "0.0.0.0", "api:app"]
