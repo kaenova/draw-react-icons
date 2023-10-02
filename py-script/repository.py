@@ -1,6 +1,7 @@
 import typing
 import core
 import uuid
+import hashlib
 
 import qdrant_client.conversions.common_types as qcT
 
@@ -185,30 +186,13 @@ class ApplicationRepository:
             index=indexing_metric,
         )
 
-        res = self.qdrant_client.scroll(
-            collection_name=collection_info.full_name,
-            scroll_filter=models.Filter(
-                should=[
-                    models.FieldCondition(
-                        key="icon_name",
-                        match=models.MatchValue(value=icon.icon_data.icon_name),
-                    )
-                    for icon in embeded_icon
-                ]
-            ),
-        )[0]
-
-        # Delete all ids if available
-        if len(res) != 0:
-            self.qdrant_client.delete(
-                collection_name=collection_info.full_name,
-                points_selector=models.PointIdsList(
-                    points=[x.id for x in res],
-                ),
-                wait=True,
+        point_ids = [
+            self.generate_icon_uuid(
+                x.icon_data.parent_name,
+                x.icon_data.icon_name,
             )
-
-        point_ids = [str(uuid.uuid4()) for _ in range(len(embeded_icon))]
+            for x in embeded_icon
+        ]
         self.qdrant_client.upsert(
             wait=True,
             collection_name=collection_info.full_name,
@@ -224,6 +208,10 @@ class ApplicationRepository:
                 ],
             ),
         )
+
+    def generate_icon_uuid(self, parent_id: str, icon_name: str) -> str:
+        hex_string = hashlib.md5(f"{parent_id}_{icon_name}".encode("UTF-8")).hexdigest()
+        return str(uuid.UUID(hex=hex_string))
 
     def disable_indexing(
         self, embedder: core.Embedder, indexing_metric: models.Distance

@@ -56,7 +56,7 @@ if "__main__" == __name__:
         log.info(
             f"Embedding Collection not exist, creating collection of {collection_info.full_name} with {arg.indexing} indexing"
         )
-        embeddings_collection = repository.create_new_embedding_collection(
+        repository.create_new_embedding_collection(
             embedder,
             arg.indexing,
         )
