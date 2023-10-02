@@ -58,7 +58,7 @@ def parse_arg_embed_generator(
         "--upload-batch",
         help="Number of batch to be uploaded, for rough estimation there are 44000 icons",
         type=int,
-        default=20_000,
+        default=500,
     )
     arg_parser.add_argument(
         "--indexing",
