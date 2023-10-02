@@ -28,7 +28,7 @@ class ApplicationRepository:
     ) -> None:
         # Connect milvus
         self.qdrant_client = QdrantClient(
-            url=qdrant_uri, api_key=qdrant_api_key, prefer_grpc=True
+            url=qdrant_uri, api_key=qdrant_api_key, prefer_grpc=True, timeout=180
         )
 
     def collection_exists(self, collection_name: str) -> qcT.CollectionInfo | None:
@@ -88,6 +88,7 @@ class ApplicationRepository:
                     on_disk=True,
                 ),
                 on_disk_payload=True,
+                shard_number=3,
             )
             collection = self.collection_exists(collection_info.full_name)
             counter += 1
@@ -189,7 +190,7 @@ class ApplicationRepository:
             scroll_filter=models.Filter(
                 should=[
                     models.FieldCondition(
-                        key="icon_id",
+                        key="icon_name",
                         match=models.MatchValue(value=icon.icon_data.icon_name),
                     )
                     for icon in embeded_icon

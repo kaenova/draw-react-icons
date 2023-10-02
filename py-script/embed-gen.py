@@ -129,7 +129,6 @@ if "__main__" == __name__:
 
     # Save to Embedding DB
     log.info("Saving unmatch checksum embedding to database")
-    t = timeit.default_timer()
     total_icon_uploaded = 0
     all_upload_icons: typing.List[core.IconEmbeddings] = []
     for parent_icon_data in embed_parent_icon_data:
@@ -137,6 +136,7 @@ if "__main__" == __name__:
             all_upload_icons.append(icon)
     log.info(f"Total Icon: {len(all_upload_icons)}")
     for icon_batch, i in utils.batch(all_upload_icons, arg.upload_batch):
+        t = timeit.default_timer()
         repository.add_or_update_icon(
             embedder,
             arg.indexing,
@@ -144,8 +144,8 @@ if "__main__" == __name__:
         )
         total_icon_uploaded += len(icon_batch)
         log.info(f"Uploaded {total_icon_uploaded} / {len(all_upload_icons)} icons")
-    t_end = timeit.default_timer()
-    log.debug(f"Embedding save {t_end - t}")
+        t_end = timeit.default_timer()
+        log.debug(f"Embedding save {t_end - t}")
     log.info("Unmatch Embedding saved")
 
     # Enable indexing
