@@ -13,7 +13,8 @@ export default function App({ Component, pageProps }: AppProps) {
         description="Search your most wanted icons with your imagination using Draw React Icons"
         twitter={{
           handle: '@kaenovama',
-          cardType: 'summary_large_image',
+          site: 'draw-react-icons.kaenova.my.id',
+          cardType: 'summary',
         }}
         openGraph={{
           url: 'https://draw-react-icons.kaenova.my.id',
