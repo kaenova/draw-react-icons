@@ -241,8 +241,8 @@ def create_token(hCaptchaToken: str) -> str:
 
 @app.get("/collections", tags=["collections"])
 def get_collections(request: "Request", secret: str) -> list[CollectionInfo]:
-    if secret != os.environ.get("JWT_SECRET"):
-        raise HTTPException(401)
+    # if secret != os.environ.get("JWT_SECRET"):
+    #     raise HTTPException(401)
     return exec.GetCollectionInfo()
 
 
