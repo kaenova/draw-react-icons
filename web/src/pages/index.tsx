@@ -11,6 +11,7 @@ import { Collection } from '@/lib/api/types';
 import MainButton from '@/components/MainButton';
 import Results from '@/components/Results';
 import Header from '@/components/Header';
+import CollectionsPicker from '@/components/CollectionsPicker';
 
 export default function Home({
   collections,
@@ -20,7 +21,9 @@ export default function Home({
   const captchaRef = React.useRef<null | HCaptcha>(null);
 
   const [Base64Data, setBase64Data] = React.useState<string | null>(null);
-  const [Collection, setCollection] = React.useState<null | string>(null);
+  const [Collection, setCollection] = React.useState<null | string>(
+    'MobileNetFigr8_Distance.COSINE',
+  );
   const debounceBase64Data = useDebounce(Base64Data, debounceDelayMs);
   const debounceCollection = useDebounce(Collection, debounceDelayMs);
 
@@ -36,7 +39,6 @@ export default function Home({
   async function handleReset() {
     if (!canvasRef.current) return;
     canvasRef.current.resetCanvas();
-    setCollection(null);
   }
 
   async function captchaVerification(token: string, ekey: string) {
@@ -97,37 +99,49 @@ export default function Home({
           }}
           className="items-center justify-center flex flex-col space-y-4"
         >
-          <p className="font-bold text-center">Draw Your Icon</p>
-          <ReactSketchCanvas
-            width="300px"
-            height="300px"
-            ref={canvasRef}
-            strokeWidth={5}
-            strokeColor="black"
-            onStroke={handleSubmit}
-          />
-          <div className="flex flex-col items-center space-y-2">
-            <p>Available Methods:</p>
-            <div className="flex flex-wrap gap-2 justify-center items-center">
-              {collections.map((v) => {
-                return (
-                  <MainButton
-                    key={v.collectionName}
-                    isActive={v.collectionName == Collection}
-                    onClick={() => setCollection(v.collectionName)}
-                  >
-                    {v.collectionName}
-                  </MainButton>
-                );
-              })}
+          <div className="max-w-[300px] flex flex-col">
+            <p className="font-bold text-center">Draw Your Icon</p>
+            <ReactSketchCanvas
+              width="300px"
+              height="300px"
+              ref={canvasRef}
+              strokeWidth={5}
+              strokeColor="black"
+              onStroke={handleSubmit}
+            />
+            <MainButton
+              onClick={handleReset}
+              className="px-6 py-2 font-medium tracking-wide text-brand capitalize transition-colors duration-300 transform bg-brand-600 rounded-lg hover:bg-brand-500 focus:outline-none focus:ring focus:ring-brand-300 focus:ring-opacity-80 bg-inherit border border-brand-500 hover:text-white"
+            >
+              Reset
+            </MainButton>
+          </div>
+          <div className="p-2 border border-brand rounded-md text-center flex flex-col space-y-4">
+            <div className="flex flex-col space-y-2">
+              <p className="text-xl font-bold">Search Settings</p>
+              <div className="text-xs">
+                <p>
+                  We recommend to try on{' '}
+                  <span className="p-1 bg-brand-100/50 rounded-md font-bold">
+                    MobileNetFigr8
+                  </span>{' '}
+                  with{' '}
+                  <span className="p-1 bg-brand-100/50 rounded-md font-bold">
+                    Cosine
+                  </span>{' '}
+                  Indexing
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col items-center space-y-2">
+              <CollectionsPicker
+                initEmbedder="MobileNetFigr8"
+                initIndexing="cosine"
+                onChange={(v) => setCollection(v)}
+                collections={collections}
+              />
             </div>
           </div>
-          <MainButton
-            onClick={handleReset}
-            className="px-6 py-2 font-medium tracking-wide text-brand capitalize transition-colors duration-300 transform bg-brand-600 rounded-lg hover:bg-brand-500 focus:outline-none focus:ring focus:ring-brand-300 focus:ring-opacity-80 bg-inherit border border-brand-500 hover:text-white"
-          >
-            Reset
-          </MainButton>
         </div>
       </div>
       <div className="min-h-[300px]">
