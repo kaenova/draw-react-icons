@@ -14,4 +14,5 @@ EMBEDDER_DICT = {
     embedder.PixelEmbedder.name(): embedder.PixelEmbedder,
     embedder.CNNFigr8Embedder.name(): embedder.CNNFigr8Embedder,
     embedder.CNNQuickDraw.name(): embedder.CNNQuickDraw,
+    embedder.MobileNetFigr8.name(): embedder.MobileNetFigr8,
 }

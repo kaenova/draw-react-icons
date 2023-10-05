@@ -7,7 +7,7 @@ import onnxruntime as ort
 from huggingface_hub import hf_hub_download
 
 
-class CNNQuickDraw(core.Embedder):
+class MobileNetFigr8(core.Embedder):
     repo_id = "kaenova/draw-react-icons"
     filename = "mobilenet-custom_fig-8_input_1000_20_80_80_1_embed_100epoch.onnx"
 
