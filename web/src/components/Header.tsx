@@ -52,7 +52,7 @@ export default function Header({
         twitter={{
           handle: '@kaenovama',
           site: 'draw-react-icons.kaenova.my.id',
-          cardType: 'summary',
+          cardType: 'summary_large_image',
         }}
         openGraph={{
           url: 'https://draw-react-icons.kaenova.my.id',
