@@ -111,7 +111,7 @@ export default function Home({
             />
             <MainButton
               onClick={handleReset}
-              className="px-6 py-2 font-medium tracking-wide text-brand capitalize transition-colors duration-300 transform bg-brand-600 rounded-lg hover:bg-brand-500 focus:outline-none focus:ring focus:ring-brand-300 focus:ring-opacity-80 bg-inherit border border-brand-500 hover:text-white"
+              className="px-6 py-2 font-medium tracking-wide text-brand capitalize transition-colors duration-300 transform bg-brand-600 rounded-lg hover:bg-brand-500 focus:outline-none focus:ring focus:ring-brand-300 focus:ring-opacity-80 bg-inherit border border-brand-500 hover:text-white rounded-tl-none rounded-tr-none"
             >
               Reset
             </MainButton>
