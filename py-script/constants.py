@@ -11,7 +11,7 @@ DEFAULT_JSON_PATH = os.path.join(script_path, "checksum.json")
 
 # Embedder
 EMBEDDER_DICT = {
-    embedder.pixel_embedder.PixelEmbedder.name(): embedder.pixel_embedder.PixelEmbedder,
-    embedder.cnn_figr8_embedder.CNNFigr8Embedder.name(): embedder.cnn_figr8_embedder.CNNFigr8Embedder,
-    embedder.cnn_quickdraw_embedder.CNNQuickDraw.name(): embedder.cnn_quickdraw_embedder.CNNQuickDraw,
+    embedder.PixelEmbedder.name(): embedder.PixelEmbedder,
+    embedder.CNNFigr8Embedder.name(): embedder.CNNFigr8Embedder,
+    embedder.CNNQuickDraw.name(): embedder.CNNQuickDraw,
 }

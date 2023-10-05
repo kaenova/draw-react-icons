@@ -391,3 +391,111 @@ jobs:
       - name: Update Embedding Database
         run: |
           python py-script/embed-gen.py --indexing dot --embedder CNNQuickDraw
+
+  embed-mobilenetfigr8-euclid:
+    needs: ["generate-image", "generate-checksum"]
+    runs-on: ubuntu-20.04
+    name: Update Icon Embedding to Database using MobileNetFigr8 on Euclidean Distance Indexing
+    env:
+      QDRANT_ENDPOINT: ${{ secrets.QDRANT_ENDPOINT }}
+      QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download artifact - react-icons-image
+        uses: actions/download-artifact@v3
+        with:
+          name: react-icons-image
+          path: py-script/
+
+      - name: Download artifact - react-icons-image-checksum
+        uses: actions/download-artifact@v3
+        with:
+          name: react-icons-image-checksum
+          path: py-script/
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Library
+        run: |
+          make python-lib
+
+      - name: Update Embedding Database
+        run: |
+          python py-script/embed-gen.py --indexing euclid --embedder MobileNetFigr8
+
+  embed-mobilenetfigr8-cosine:
+    needs: ["embed-mobilenetfigr8-euclid"]
+    runs-on: ubuntu-20.04
+    name: Update Icon Embedding to Database using MobileNetFigr8 on Cosine Distance Indexing
+    env:
+      QDRANT_ENDPOINT: ${{ secrets.QDRANT_ENDPOINT }}
+      QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download artifact - react-icons-image
+        uses: actions/download-artifact@v3
+        with:
+          name: react-icons-image
+          path: py-script/
+
+      - name: Download artifact - react-icons-image-checksum
+        uses: actions/download-artifact@v3
+        with:
+          name: react-icons-image-checksum
+          path: py-script/
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Library
+        run: |
+          make python-lib
+
+      - name: Update Embedding Database
+        run: |
+          python py-script/embed-gen.py --indexing cosine --embedder MobileNetFigr8
+
+  embed-mobilenetfigr8-dot:
+    needs: ["embed-mobilenetfigr8-cosine"]
+    runs-on: ubuntu-20.04
+    name: Update Icon Embedding to Database using MobileNetFigr8 on Dot Product Indexing
+    env:
+      QDRANT_ENDPOINT: ${{ secrets.QDRANT_ENDPOINT }}
+      QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download artifact - react-icons-image
+        uses: actions/download-artifact@v3
+        with:
+          name: react-icons-image
+          path: py-script/
+
+      - name: Download artifact - react-icons-image-checksum
+        uses: actions/download-artifact@v3
+        with:
+          name: react-icons-image-checksum
+          path: py-script/
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Library
+        run: |
+          make python-lib
+
+      - name: Update Embedding Database
+        run: |
+          python py-script/embed-gen.py --indexing dot --embedder MobileNetFigr8
