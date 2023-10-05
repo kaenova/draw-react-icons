@@ -59,7 +59,7 @@ export default function Home({
   }
 
   if (!!!auth) {
-    return <></>;
+    return <Header></Header>;
   }
 
   if (AuthLoading === null) {
