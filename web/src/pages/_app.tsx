@@ -32,7 +32,7 @@ export default function App({ Component, pageProps }: AppProps) {
               type: 'image/jpg',
             },
             {
-              url: '/thumb_square.jpg',
+              url: '/thumb_twitter.jpg',
               alt: 'Thumbnail Image Twitter Draw React Icons',
               height: 512,
               width: 1024,
@@ -40,10 +40,6 @@ export default function App({ Component, pageProps }: AppProps) {
             },
           ],
           siteName: 'DrawReactIcons',
-        }}
-        twitter={{
-          handle: '@kaenovama',
-          cardType: 'summary_large_image',
         }}
       />
       <Toaster />
