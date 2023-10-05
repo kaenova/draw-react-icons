@@ -11,6 +11,10 @@ export default function App({ Component, pageProps }: AppProps) {
       <NextSeo
         title="Search the Icons you Imagine - Draw React Icons"
         description="Search your most wanted icons with your imagination using Draw React Icons"
+        twitter={{
+          handle: '@kaenovama',
+          cardType: 'summary_large_image',
+        }}
         openGraph={{
           url: 'https://draw-react-icons.kaenova.my.id',
           title: 'Search the Icons you Imagine - Draw React Icons',
