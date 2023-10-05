@@ -122,6 +122,11 @@ if "__main__" == __name__:
     log.debug(f"Data Loader {t_end - t}")
     log.info(f"Data Loaded")
 
+    # Exit if there's nothing to update
+    if len(embed_parent_icon_data) == 0:
+        log.info("There's nothing to update, exiting program")
+        exit(0)
+
     # Disable indexing
     log.info("Disabling indexing")
     repository.disable_indexing(embedder, arg.indexing)
