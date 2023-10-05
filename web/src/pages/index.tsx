@@ -155,6 +155,12 @@ export default function Home({
 }
 
 export const getServerSideProps = async () => {
-  const collections = (await api.get<Collection[]>('/collections')).data;
+  const collections = (
+    await api.get<Collection[]>('/collections', {
+      params: {
+        secret: process.env.JWT_SECRET,
+      },
+    })
+  ).data;
   return { props: { collections } };
 };

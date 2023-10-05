@@ -19,8 +19,12 @@ from io import BytesIO
 from pydantic import BaseModel
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+
+from slowapi.errors import RateLimitExceeded
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
 
 origins = [
     "http://localhost:3000",
@@ -193,9 +197,13 @@ class ImageEstimator:
         return success
 
 
+limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(
     title="Draw React Icons Queries API",
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 
 if os.environ["HCAPTCHA_SECRET"].strip() == "":
     raise ValueError("AUTH_SECRET Environment variable need to be set")
@@ -232,7 +240,9 @@ def create_token(hCaptchaToken: str) -> str:
 
 
 @app.get("/collections", tags=["collections"])
-def get_collections() -> list[CollectionInfo]:
+def get_collections(request: "Request", secret: str) -> list[CollectionInfo]:
+    if secret != os.environ.get("JWT_SECRET"):
+        raise HTTPException(401)
     return exec.GetCollectionInfo()
 
 
@@ -245,7 +255,10 @@ class CollectionQuery(BaseModel):
 
 
 @app.post("/collections/query", tags=["collections"])
-def query_collections(token: str, collectionQuery: CollectionQuery) -> list[Icon]:
+@limiter.limit("20/minute")
+def query_collections(
+    request: "Request", token: str, collectionQuery: CollectionQuery
+) -> list[Icon]:
     return exec.QueryImage(
         token,
         collectionQuery.collectionName,

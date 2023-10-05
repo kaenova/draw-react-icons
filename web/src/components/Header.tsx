@@ -5,7 +5,7 @@ function Sponsor() {
   return (
     <div className="flex flex-col text-center space-y-4">
       <p className="text-sm font-bold">This application is powered by</p>
-      <div className="grid grid-flow-col gap-4 text-xs">
+      <div className="flex flex-wrap justify-center gap-4 text-xs">
         <div className="flex flex-col justify-between items-center">
           <img
             className="h-5 object-cover w-min"
