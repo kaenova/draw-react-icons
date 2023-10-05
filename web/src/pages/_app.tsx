@@ -18,21 +18,21 @@ export default function App({ Component, pageProps }: AppProps) {
             'Search your most wanted icons with your imagination using Draw React Icons',
           images: [
             {
-              url: '/thumb.jpg',
+              url: 'https://draw-react-icons.kaenova.my.id/thumb.jpg',
               alt: 'Thumbnail Image Wide Draw React Icons',
               height: 630,
               width: 1200,
               type: 'image/jpg',
             },
             {
-              url: '/thumb_square.jpg',
+              url: 'https://draw-react-icons.kaenova.my.id/thumb_square.jpg',
               alt: 'Thumbnail Image Square Draw React Icons',
               height: 619,
               width: 619,
               type: 'image/jpg',
             },
             {
-              url: '/thumb_twitter.jpg',
+              url: 'https://draw-react-icons.kaenova.my.id/thumb_twitter.jpg',
               alt: 'Thumbnail Image Twitter Draw React Icons',
               height: 512,
               width: 1024,
