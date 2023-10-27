@@ -22,7 +22,7 @@ export default function Home({
 
   const [Base64Data, setBase64Data] = React.useState<string | null>(null);
   const [Collection, setCollection] = React.useState<null | string>(
-    'MobileNetFigr8_Distance.COSINE',
+    'MobileNetFigr8_Cosine',
   );
   const debounceBase64Data = useDebounce(Base64Data, debounceDelayMs);
   const debounceCollection = useDebounce(Collection, debounceDelayMs);
