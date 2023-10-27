@@ -1,6 +1,7 @@
 import { Collection } from '@/lib/api/types';
 import React from 'react';
 import MainButton from './MainButton';
+import { capitalize } from '@/lib/utils';
 
 interface CollectionsPickerProps {
   collections: Collection[];
@@ -14,7 +15,7 @@ interface CollectionData {
 }
 
 function combineNameIndex(name: string, index: string): string {
-  let newNameIndex = `Distance.${index.toUpperCase()}`;
+  let newNameIndex = capitalize(index);
   return `${name}_${newNameIndex}`;
 }
 
